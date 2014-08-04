@@ -1,0 +1,228 @@
+type ALPHA
+
+key Q {
+    label:                              'Q'
+    base:                               'q'
+    shift, capslock:                    'Q'
+    ctrl, alt, meta:                    '^'
+}
+
+key W {
+    label:                              'W'
+    base:                               'w'
+    shift, capslock:                    'W'
+    ctrl, alt, meta:                    '+'
+}
+
+key E {
+    label:                              'E'
+    base:                               'e'
+    shift, capslock:                    'E'
+    ctrl, alt, meta, number:            '1'
+}
+
+key R {
+    label:                              'R'
+    base:                               'r'
+    shift, capslock:                    'R'
+    ctrl, alt, meta, number:            '2'
+}
+
+key T {
+    label:                              'T'
+    base:                               't'
+    shift, capslock:                    'T'
+    ctrl, alt, meta, number:            '3'
+}
+
+key Y {
+    label:                              'Y'
+    base:                               'y'
+    shift, capslock:                    'Y'
+    ctrl, alt, meta:                    '-'
+}
+
+key U {
+    label:                              'U'
+    base:                               'u'
+    shift, capslock:                    'U'
+    ctrl, alt, meta:                    '_'
+}
+
+key I {
+    label:                              'I'
+    base:                               'i'
+    shift, capslock:                    'I'
+    ctrl, alt, meta:                    '&'
+}
+
+key O {
+    label:                              'O'
+    base:                               'o'
+    shift, capslock:                    'O'
+    ctrl, alt, meta:                    '('
+}
+
+key P {
+    label:                              'P'
+    base:                               'p'
+    shift, capslock:                    'P'
+    ctrl, alt, meta:                    ')'
+}
+
+key A {
+    label:                              'A'
+    base:                               'a'
+    shift, capslock:                    'A'
+    ctrl, alt, meta:                    '%'
+}
+
+key S {
+    label:                              'S'
+    base:                               's'
+    shift, capslock:                    'S'
+    ctrl, alt, meta:                    '*'
+}
+
+key D {
+    label:                              'D'
+    base:                               'd'
+    shift, capslock:                    'D'
+    ctrl, alt, meta, number:            '4'
+}
+
+key F {
+    label:                              'F'
+    base:                               'f'
+    shift, capslock:                    'F'
+    ctrl, alt, meta, number:            '5'
+}
+
+key G {
+    label:                              'G'
+    base:                               'g'
+    shift, capslock:                    'G'
+    ctrl, alt, meta, number:            '6'
+}
+
+key H {
+    label:                              'H'
+    base:                               'h'
+    shift, capslock:                    'H'
+    ctrl, alt, meta:                    '='
+}
+
+key J {
+    label:                              'J'
+    base:                               'j'
+    shift, capslock:                    'J'
+    ctrl, alt, meta:                    '~'
+}
+
+key K {
+    label:                              'K'
+    base:                               'k'
+    shift, capslock:                    'K'
+    ctrl, alt, meta:                    ':'
+}
+
+key L {
+    label:                              'L'
+    base:                               'l'
+    shift, capslock:                    'L'
+    ctrl, alt, meta:                    ';'
+}
+
+key Z {
+    label:                              'Z'
+    base:                               'z'
+    shift, capslock:                    'Z'
+    ctrl, alt, meta:                    '#'
+}
+
+key X {
+    label:                              'X'
+    base:                               'x'
+    shift, capslock:                    'X'
+    ctrl, alt, meta, number:            '7'
+}
+
+key C {
+    label:                              'C'
+    base:                               'c'
+    shift, capslock:                    'C'
+    ctrl, alt, meta, number:            '8'
+}
+
+key V {
+    label:                              'V'
+    base:                               'v'
+    shift, capslock:                    'V'
+    ctrl, alt, meta, number:            '9'
+}
+
+key B {
+    label:                              'B'
+    base:                               'b'
+    shift, capslock:                    'B'
+    ctrl, alt, meta:                    '/'
+}
+
+key N {
+    label:                              'N'
+    base:                               'n'
+    shift, capslock:                    'N'
+    ctrl, alt, meta:                    '\''
+}
+
+key M {
+    label:                              'M'
+    base:                               'm'
+    shift, capslock:                    'M'
+    ctrl, alt, meta:                    '\"'
+}
+
+key AT {
+    label:                              '@'
+    base:                               '@'
+    shift, capslock:                    '@'
+    ctrl, alt, meta:                    '!'
+}
+
+key COMMA {
+    label:                              ','
+    base:                               ','
+    shift, capslock:                    ','
+    ctrl, alt, meta, number:            '0'
+}
+
+key PERIOD {
+    label:                              '.'
+    base:                               '.'
+    shift, capslock:                    '.'
+    ctrl, alt, meta:                    '?'
+}
+
+key SYM {
+    base:                               '\uef01'
+    shift, capslock:                    none
+    ctrl, alt, meta:                    none
+}
+
+key SPACE {
+    label:				' '
+    base:                               ' '
+    shift, capslock:                    ' '
+    ctrl, alt, meta:                    ' '
+}
+
+key ENTER {
+    base:                               '\n'
+    shift, capslock:                    none
+    ctrl, alt, meta, number:            none
+}
+
+key DPAD_CENTER {
+    base:                               fallback ENTER
+}
+

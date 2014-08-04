@@ -1,0 +1,17 @@
+on init
+    # Setup android gadget
+    write /sys/module/g_android/parameters/serial_number CM10.2-SmartChat
+    write /sys/module/g_android/parameters/product_id 0x1351
+    
+    # Enable MASS storage on SDCARD
+    write /sys/devices/platform/msm_hsusb/gadget/lun0/file /dev/block/mmcblk0p1
+    write /sys/bus/platform/drivers/msm_sdcc/msm_sdcc.1/polling 1
+
+on boot
+    
+on property:ro.debuggable=1
+    start adbd
+
+# setup_adbd will start adb once it has checked the keys
+on property:service.adb.root=1
+    restart adbd
