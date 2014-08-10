@@ -18,7 +18,6 @@
 # Platform
 TARGET_NO_BOOTLOADER := true
 TARGET_NO_RADIOIMAGE := true
-BOARD_PROVIDES_LIBRIL := true
 
 TARGET_BOARD_PLATFORM := msm7x27a
 TARGET_BOARD_PLATFORM_GPU := qcom-adreno200
@@ -31,7 +30,6 @@ TARGET_ARCH_VARIANT := armv7-a-neon
 
 TARGET_NO_HW_VSYNC := true
 
-
 ARCH_ARM_HAVE_TLS_REGISTER := true
 
 TARGET_GLOBAL_CFLAGS += -mtune=cortex-a5 -mfpu=neon -mfloat-abi=softfp
@@ -42,8 +40,8 @@ TARGET_KERNEL_SOURCE := kernel/zte/p752d
 TARGET_KERNEL_CONFIG := cyanogen_p752d_defconfig
 TARGET_BOOTLOADER_BOARD_NAME := tureis
 # For debugging via framebuffer, uncomment this. Remember to activate framebuffer in defconfig:
-BOARD_KERNEL_CMDLINE := androidboot.hardware=tureis console=tty0 no_console_suspend=1
-#BOARD_KERNEL_CMDLINE := androidboot.hardware=tureis console=null
+#BOARD_KERNEL_CMDLINE := androidboot.hardware=tureis console=tty0 no_console_suspend=1
+BOARD_KERNEL_CMDLINE := androidboot.hardware=tureis console=null
 BOARD_KERNEL_BASE := 0x200000
 BOARD_KERNEL_PAGESIZE := 2048
 BOARD_MKBOOTIMG_ARGS := --ramdisk_offset 0x01100000
@@ -72,6 +70,7 @@ COMMON_GLOBAL_CFLAGS += -DQCOM_NO_SECURE_PLAYBACK
 # Qualcomm hardware
 BOARD_USES_QCOM_HARDWARE := true
 COMMON_GLOBAL_CFLAGS += -DQCOM_HARDWARE
+TARGET_USE_QCOM_BIONIC_OPTIMIZATION := true
 
 # WiFi
 BOARD_WPA_SUPPLICANT_DRIVER := WEXT

@@ -133,11 +133,6 @@ on boot
     
 on property:ro.debuggable=1
     start adbd
-    
-#dmesg
-service dmesg /system/bin/dmesg > /cache/dmesg.log
-    class main
-    oneshot
 
 # setup_adbd will start adb once it has checked the keys
 on property:service.adb.root=1
@@ -157,7 +152,7 @@ on property:ro.boot.emmc=true
 service qmuxd /system/bin/qmuxd
     class core
     user radio
-    group radio audio bluetooth gps qcom_diag
+    group system radio inet
 
 service netmgrd /system/bin/netmgrd
     class late_start
@@ -209,6 +204,13 @@ service fm_dl /system/bin/sh /system/etc/init.qcom.fm.sh
     group system qcom_oncrpc
     disabled
     oneshot
+    
+service ril-daemon1 /system/bin/rild -c 1
+    socket rild1 stream 660 root radio
+    socket rild-debug1 stream 660 radio system
+    user root
+    disabled
+    group radio cache inet misc audio sdcard_rw qcom_oncrpc diag
 
 service akmd /system/bin/akmd8962 -m 5
     class main
