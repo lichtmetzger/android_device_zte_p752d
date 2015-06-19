@@ -35,6 +35,10 @@ on post-fs-data
 
     mkdir /data/misc/dhcp 0770 dhcp dhcp
     chown dhcp dhcp /data/misc/dhcp
+    setprop wifi.interface wlan0
+    
+    #set the right for wlan driver to control slot3's polling property
+	chown system system /sys/bus/platform/devices/msm_sdcc.2/polling
 
     mkdir /data/radio 0770 radio radio
     chmod 2770 /data/radio
@@ -157,24 +161,13 @@ service qmuxd /system/bin/qmuxd
 service netmgrd /system/bin/netmgrd
     class late_start
 
-service wpa_supplicant /system/bin/wpa_supplicant \
-    -iwlan0 -Dnl80211 -c/data/misc/wifi/wpa_supplicant.conf \
-    -I/system/etc/wifi/wpa_supplicant_overlay.conf \
-    -e/data/misc/wifi/entropy.bin
+service wpa_supplicant /system/bin/wpa_supplicant -Dwext -iwlan0 -W -c/data/misc/wifi/wpa_supplicant.conf
     class main
     socket wpa_wlan0 dgram 660 wifi wifi
     disabled
     oneshot
 
-service hostapd /system/bin/hostapd -dddd /data/misc/wifi/hostapd.conf
-    class late_start
-    socket hostapd_wlan0 dgram 660 root wifi
-    user root
-    group wifi
-    oneshot
-    disabled
-
-service dhcpcd_wlan0 /system/bin/dhcpcd -aABDKL
+service dhcpcd_wlan0 /system/bin/dhcpcd -ABDKL
     class main
     disabled
     oneshot
@@ -211,6 +204,17 @@ service ril-daemon1 /system/bin/rild -c 1
     user root
     disabled
     group radio cache inet misc audio sdcard_rw qcom_oncrpc diag
+    
+service hostapd /system/bin/hostapd /data/misc/wifi/hostapd.conf
+    socket hostapd_athap0 dgram 660 wifi wifi
+    group wifi inet
+    oneshot
+    disabled
+
+service abtfilt /system/bin/abtfilt -c -d -z -n
+    class main
+    disabled
+    oneshot
 
 service akmd /system/bin/akmd8962 -m 5
     class main
