@@ -1,0 +1,13 @@
+#!/system/bin/sh
+# set 0 = auto, 1 = internal, 2 = SD-Card
+(
+while : ; do
+	COMPLETED=$(logcat -d *:I *:D | grep -c android.intent.action.BOOT_COMPLETED)
+	if [ $COMPLETED -ne 0 ] ; then
+		echo "BOOT_COMPLETED: setting setInstallLocation"
+		pm set-install-location 2
+		exit 0
+	fi
+	sleep 1
+done
+) &
