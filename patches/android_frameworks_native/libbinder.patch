@@ -1,0 +1,73 @@
+From 48891756a8f40eb19acc39b4cf4e18d87f1b1658 Mon Sep 17 00:00:00 2001
+From: Ricardo Cerqueira <cyanogenmod@cerqueira.org>
+Date: Wed, 22 Dec 2010 21:46:43 +0000
+Subject: [PATCH] libbinder: Export older versions of binder symbols
+
+libbinder's enforceInterface function has changed, and even though the API
+is backwards-compatible, the ABI isn't. Proprietaries linked with an older
+(pre-gb) libbinder.so will fail without this
+Additionally, ICS changed the argument types for appendFrom; add a wrapper
+for that one.
+
+Change-Id: Ib719f6fba3d8725ad81a2afaa419b7ee52fd3780
+---
+ include/binder/Parcel.h |  3 +++
+ libs/binder/Parcel.cpp  | 15 ++++++++++++++-
+ 2 files changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/include/binder/Parcel.h b/include/binder/Parcel.h
+index 33b2f00..bc6e573 100644
+--- a/include/binder/Parcel.h
++++ b/include/binder/Parcel.h
+@@ -76,6 +76,9 @@ class Parcel
+     // passed in.
+     bool                enforceInterface(const String16& interface,
+                                          IPCThreadState* threadState = NULL) const;
++#ifdef _INTERNAL_BINDER_PARCEL_
++    bool                enforceInterface(const String16& interface) const;
++#endif
+     bool                checkInterface(IBinder*) const;
+ 
+     void                freeData();
+diff --git a/libs/binder/Parcel.cpp b/libs/binder/Parcel.cpp
+index 6b4c1a6..a95d00f 100644
+--- a/libs/binder/Parcel.cpp
++++ b/libs/binder/Parcel.cpp
+@@ -17,6 +17,7 @@
+ #define LOG_TAG "Parcel"
+ //#define LOG_NDEBUG 0
+ 
++#define _INTERNAL_BINDER_PARCEL_
+ #include <binder/Parcel.h>
+ 
+ #include <binder/IPCThreadState.h>
+@@ -447,6 +448,12 @@ status_t Parcel::appendFrom(const Parcel *parcel, size_t offset, size_t len)
+     return err;
+ }
+ 
++extern "C" Parcel *_ZN7android6Parcel10appendFromEPKS0_jj(Parcel *This, const Parcel *parcel, size_t offset, size_t len);
++extern "C" Parcel *_ZN7android6Parcel10appendFromEPS0_jj(Parcel *This, Parcel *parcel, size_t offset, size_t len)
++{
++    return _ZN7android6Parcel10appendFromEPKS0_jj(This, parcel, offset, len);
++}
++
+ bool Parcel::pushAllowFds(bool allowFds)
+ {
+     const bool origValue = mAllowFds;
+@@ -478,9 +485,15 @@ status_t Parcel::writeInterfaceToken(const String16& interface)
+     return writeString16(interface);
+ }
+ 
++bool Parcel::enforceInterface(const String16& interface) const
++{
++	return enforceInterface(interface,NULL);
++}
++
++
+ bool Parcel::checkInterface(IBinder* binder) const
+ {
+-    return enforceInterface(binder->getInterfaceDescriptor());
++    return enforceInterface(binder->getInterfaceDescriptor(),NULL);
+ }
+ 
+ bool Parcel::enforceInterface(const String16& interface,

@@ -59,10 +59,11 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     Launcher2 \
     AdAway \
+    F-Droid \
     QuickSnap \
     Music \
     TotalCommander \
-    Lightning
+    NakedBrowser
 
 # Ramdisk
 PRODUCT_COPY_FILES += \

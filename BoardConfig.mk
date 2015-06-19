@@ -72,6 +72,10 @@ BOARD_USES_QCOM_HARDWARE := true
 COMMON_GLOBAL_CFLAGS += -DQCOM_HARDWARE
 TARGET_USE_QCOM_BIONIC_OPTIMIZATION := true
 
+# Use our own Java RIL implementation to get rmnet0 and parse the over-lengthy DATACALL_RESPONSE
+# messages the stock framework can't handle
+BOARD_RIL_CLASS := ../../../device/zte/p752d/ril/
+
 # WiFi
 BOARD_WPA_SUPPLICANT_DRIVER := WEXT
 WPA_SUPPLICANT_VERSION := VER_0_8_X

@@ -1,0 +1,105 @@
+diff -U 3 -H -d -r -N -- cm11-backup/vendor/cm/config/common.mk cm11/vendor/cm/config/common.mk
+--- cm11-backup/vendor/cm/config/common.mk	2014-11-13 22:56:46.000000000 +0100
++++ cm11/vendor/cm/config/common.mk	2014-11-14 05:11:01.757907043 +0100
+@@ -125,31 +125,16 @@
+ 
+ # Required CM packages
+ PRODUCT_PACKAGES += \
+-    Development \
+     LatinIME \
+     BluetoothExt
+ 
+-# Optional CM packages
+-PRODUCT_PACKAGES += \
+-    VoicePlus \
+-    Basic \
+-    libemoji
+-
+ # Custom CM packages
+ PRODUCT_PACKAGES += \
+-    Launcher3 \
+-    Trebuchet \
+     DSPManager \
+     libcyanogen-dsp \
+     audio_effects.conf \
+-    CMWallpapers \
+-    Apollo \
+-    CMFileManager \
+-    LockClock \
+-    CMUpdater \
+-    CMAccount \
+-    CMHome
+-
++    CMAccount
++    
+ # CM Hardware Abstraction Framework
+ PRODUCT_PACKAGES += \
+     org.cyanogenmod.hardware \
+@@ -167,16 +152,9 @@
+     htop \
+     powertop \
+     lsof \
+-    mount.exfat \
+-    fsck.exfat \
+-    mkfs.exfat \
+     mkfs.f2fs \
+     fsck.f2fs \
+     fibmap.f2fs \
+-    ntfsfix \
+-    ntfs-3g \
+-    gdbserver \
+-    micro_bench \
+     oprofiled \
+     sqlite3 \
+     strace
+diff -U 3 -H -d -r -N -- cm11-backup/vendor/cm/config/common_full.mk cm11/vendor/cm/config/common_full.mk
+--- cm11-backup/vendor/cm/config/common_full.mk	2014-11-13 22:56:46.000000000 +0100
++++ cm11/vendor/cm/config/common_full.mk	2014-11-14 00:33:51.891071327 +0100
+@@ -7,30 +7,10 @@
+ # Include CM audio files
+ include vendor/cm/config/cm_audio.mk
+ 
+-# Include CM LatinIME dictionaries
+-PRODUCT_PACKAGE_OVERLAYS += vendor/cm/overlay/dictionaries
+-
+ # Optional CM packages
+ PRODUCT_PACKAGES += \
+-    Galaxy4 \
+-    HoloSpiralWallpaper \
+-    LiveWallpapers \
+     LiveWallpapersPicker \
+-    MagicSmokeWallpapers \
+-    NoiseField \
+-    PhaseBeam \
+-    VisualizationWallpapers \
+-    PhotoTable \
+-    SoundRecorder \
+-    PhotoPhase
+-
+-PRODUCT_PACKAGES += \
+-    VideoEditor \
+-    libvideoeditor_jni \
+-    libvideoeditor_core \
+-    libvideoeditor_osal \
+-    libvideoeditor_videofilters \
+-    libvideoeditorplayer
++    SoundRecorder
+ 
+ # Extra tools in CM
+ PRODUCT_PACKAGES += \
+diff -U 3 -H -d -r -N -- cm11-backup/vendor/cm/config/telephony.mk cm11/vendor/cm/config/telephony.mk
+--- cm11-backup/vendor/cm/config/telephony.mk	2014-11-13 22:56:46.000000000 +0100
++++ cm11/vendor/cm/config/telephony.mk	2014-11-14 00:33:27.756073017 +0100
+@@ -15,10 +15,8 @@
+ PRODUCT_PACKAGES += \
+     Mms \
+     Stk \
+-    CellBroadcastReceiver \
+-    VoiceDialer \
+-    WhisperPush
+-
++    CellBroadcastReceiver
++    
+ # Mms depends on SoundRecorder for recorded audio messages
+ PRODUCT_PACKAGES += \
+     SoundRecorder
