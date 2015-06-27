@@ -1,0 +1,151 @@
+From 8472a2982e286f25f275e2d04de68463460b2fb0 Mon Sep 17 00:00:00 2001
+From: Deepak Verma <dverma@codeaurora.org>
+Date: Fri, 16 Aug 2013 17:19:08 +0530
+Subject: [PATCH] mm-video: venc: Distinguish between normal NV12 and aligned
+ NV12
+
+Encoder has a hard-requirement of 2K alignment of UV plane.
+Apps and other non-camera sources (not aware of this alignment)
+will queue YUV420SP buffers, which need an explicit alignment.
+But for some other apps(e.g VT) that are aware that the component
+wants aligned NV12 and would align it themselves, causing the component
+to muck up the buffer by realigning it.
+
+To prevent the confusion, the component now makes a distinction between
+NV12 (OMX_COLOR_FormatYUV420SemiPlanar) and aligned NV12 (QOMX_COLOR_\
+FORMATYUV420PackedSemiPlanar32).  Clients who prefer to provide aligned
+buffers will now set the latter as the input port format.
+
+Change-Id: I73c337660fb825e9b267663266fd4b9d6e35443e
+---
+ mm-core/inc/OMX_QCOMExtns.h                     |  1 +
+ mm-video/vidc/venc/src/omx_video_base.cpp       | 31 +++++++++++++------------
+ mm-video/vidc/venc/src/omx_video_encoder.cpp    | 13 +++++++----
+ mm-video/vidc/venc/src/video_encoder_device.cpp |  4 ++--
+ 4 files changed, 27 insertions(+), 22 deletions(-)
+
+diff --git a/mm-core/inc/OMX_QCOMExtns.h b/mm-core/inc/OMX_QCOMExtns.h
+index 6ccf512..f022642 100644
+--- a/mm-core/inc/OMX_QCOMExtns.h
++++ b/mm-core/inc/OMX_QCOMExtns.h
+@@ -255,6 +255,7 @@ enum OMX_QCOM_COLOR_FORMATTYPE
+     QOMX_COLOR_FormatYUV420PackedSemiPlanar64x32Tile2m8ka,
+     QOMX_COLOR_FormatYUV420PackedSemiPlanar32m4ka_nv21,
+     QOMX_COLOR_FormatYUV420PackedSemiPlanar16m2ka_nv21,
++    QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
+     QOMX_COLOR_FormatAndroidOpaque = (OMX_COLOR_FORMATTYPE) OMX_COLOR_FormatVendorStartUnused  + 0x789,
+ };
+ 
+diff --git a/mm-video/vidc/venc/src/omx_video_base.cpp b/mm-video/vidc/venc/src/omx_video_base.cpp
+index a47c7d5..baa20f9 100644
+--- a/mm-video/vidc/venc/src/omx_video_base.cpp
++++ b/mm-video/vidc/venc/src/omx_video_base.cpp
+@@ -1584,24 +1584,25 @@ OMX_ERRORTYPE  omx_video::get_parameter(OMX_IN OMX_HANDLETYPE     hComp,
+       if(portFmt->nPortIndex == (OMX_U32) PORT_INDEX_IN)
+       {
+           int index = portFmt->nIndex;
+-
+-          if (index > 1) {
++          //we support following formats
++          //index 0 - YUV420SP32m
++          //index 1 - opaque which internally maps to YUV420SP.
++          //index 2 - YUV420SP
++          //this can be extended in the future
++          int supportedFormats[] = {
++              [0] = QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m,
++              [1] = QOMX_COLOR_FormatAndroidOpaque,
++              [2] = OMX_COLOR_FormatYUV420SemiPlanar,
++          };
++
++          if (index > sizeof(supportedFormats)/sizeof(*supportedFormats)) {
+               eRet = OMX_ErrorNoMore;
+           } else {
+               memcpy(portFmt, &m_sInPortFormat, sizeof(m_sInPortFormat));
+-#ifdef _ANDROID_ICS_
+-              if (index == 1) {
+-                  //we support two formats
+-                  //index 0 - YUV420SP
+-                  //index 1 - opaque which internally maps to YUV420SP.
+-                  //this can be extended in the future
+-                  portFmt->nIndex = index; //restore index set from client
+-                  portFmt->eColorFormat =
+-                    (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FormatAndroidOpaque;
+-                  DEBUG_PRINT_HIGH("get_parameter: QOMX_COLOR_FormatAndroidOpaque");
+-              }
++              portFmt->nIndex = index; //restore index set from client
++              portFmt->eColorFormat =
++                (OMX_COLOR_FORMATTYPE)supportedFormats[index];
+           }
+-#endif
+       }
+       else if(portFmt->nPortIndex == (OMX_U32) PORT_INDEX_OUT)
+       {
+@@ -3452,7 +3453,7 @@ OMX_ERRORTYPE  omx_video::empty_this_buffer_proxy(OMX_IN OMX_HANDLETYPE
+             buffer->nFilledLen);
+     DEBUG_PRINT_LOW("memcpy() done in ETBProxy for i/p Heap UseBuf");
+   } else if (m_sInPortDef.format.video.eColorFormat ==
+-      OMX_COLOR_FormatYUV420SemiPlanar && !mUseProxyColorFormat) {
++      OMX_COLOR_FormatYUV420SemiPlanar) {
+       //For the case where YUV420SP buffers are qeueued to component
+       //by sources other than camera (Apps via MediaCodec), alignment
+       //of chroma-plane to 2K is necessary.
+diff --git a/mm-video/vidc/venc/src/omx_video_encoder.cpp b/mm-video/vidc/venc/src/omx_video_encoder.cpp
+index 90f6a69..ecd0796 100644
+--- a/mm-video/vidc/venc/src/omx_video_encoder.cpp
++++ b/mm-video/vidc/venc/src/omx_video_encoder.cpp
+@@ -255,7 +255,8 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
+   m_sInPortDef.format.video.nSliceHeight = OMX_CORE_QCIF_HEIGHT;
+   m_sInPortDef.format.video.nBitrate = 64000;
+   m_sInPortDef.format.video.xFramerate = 15 << 16;
+-  m_sInPortDef.format.video.eColorFormat =  OMX_COLOR_FormatYUV420SemiPlanar;
++  m_sInPortDef.format.video.eColorFormat =  (OMX_COLOR_FORMATTYPE)
++      QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
+   m_sInPortDef.format.video.eCompressionFormat =  OMX_VIDEO_CodingUnused;
+ 
+   if(dev_get_buf_req(&m_sInPortDef.nBufferCountMin,
+@@ -303,7 +304,8 @@ OMX_ERRORTYPE omx_venc::component_init(OMX_STRING role)
+   OMX_INIT_STRUCT(&m_sInPortFormat, OMX_VIDEO_PARAM_PORTFORMATTYPE);
+   m_sInPortFormat.nPortIndex = (OMX_U32) PORT_INDEX_IN;
+   m_sInPortFormat.nIndex = 0;
+-  m_sInPortFormat.eColorFormat =  OMX_COLOR_FormatYUV420SemiPlanar;
++  m_sInPortFormat.eColorFormat =  (OMX_COLOR_FORMATTYPE)
++      QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
+   m_sInPortFormat.eCompressionFormat = OMX_VIDEO_CodingUnused;
+ 
+ 
+@@ -532,8 +534,8 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
+ 
+ #ifdef _ANDROID_ICS_
+         if (portDefn->format.video.eColorFormat == (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FormatAndroidOpaque) {
+-            m_sInPortDef.format.video.eColorFormat =
+-                OMX_COLOR_FormatYUV420SemiPlanar;
++            m_sInPortDef.format.video.eColorFormat = (OMX_COLOR_FORMATTYPE)
++                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
+             if(secure_session) {
+               secure_color_format = (int) QOMX_COLOR_FormatAndroidOpaque;
+               mUseProxyColorFormat = false;
+@@ -613,7 +615,8 @@ OMX_ERRORTYPE  omx_venc::set_parameter(OMX_IN OMX_HANDLETYPE     hComp,
+ #ifdef _ANDROID_ICS_
+         if (portFmt->eColorFormat ==
+             (OMX_COLOR_FORMATTYPE)QOMX_COLOR_FormatAndroidOpaque) {
+-            m_sInPortFormat.eColorFormat = OMX_COLOR_FormatYUV420SemiPlanar;
++            m_sInPortFormat.eColorFormat = (OMX_COLOR_FORMATTYPE)
++                QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m;
+             if(secure_session) {
+               secure_color_format = (int) QOMX_COLOR_FormatAndroidOpaque;
+               mUseProxyColorFormat = false;
+diff --git a/mm-video/vidc/venc/src/video_encoder_device.cpp b/mm-video/vidc/venc/src/video_encoder_device.cpp
+index 2cc0036..db05a31 100644
+--- a/mm-video/vidc/venc/src/video_encoder_device.cpp
++++ b/mm-video/vidc/venc/src/video_encoder_device.cpp
+@@ -2471,8 +2471,8 @@ bool venc_dev::venc_set_color_format(OMX_COLOR_FORMATTYPE color_format)
+   venc_ioctl_msg ioctl_msg = {NULL, NULL};
+   DEBUG_PRINT_LOW("\n venc_set_color_format: color_format = %u ", color_format);
+ 
+-  if(color_format == OMX_COLOR_FormatYUV420SemiPlanar)
+-  {
++  if(color_format == OMX_COLOR_FormatYUV420SemiPlanar ||
++      color_format == QOMX_COLOR_FORMATYUV420PackedSemiPlanar32m) {
+ #ifdef MAX_RES_1080P
+   m_sVenc_cfg.inputformat= VEN_INPUTFMT_NV12_16M2KA;
+     DEBUG_PRINT_HIGH("venc_set_color_format: VEN_INPUTFMT_NV12_16M2KA");
