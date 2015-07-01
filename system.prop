@@ -53,6 +53,7 @@ ril.subscription.types=NV,RUIM
 ro.telephony.ril_class=ZTERIL
 ro.telephony.ril.v3=signalstrength,usehcradio
 ro.build.baseband_version=P752DB03
+gsm.version.baseband=P752DB03
 
 # USB
 persist.sys.usb.config=mtp,adb
