@@ -83,8 +83,10 @@ key     139         MENU        WAKE
 key     158         BACK        WAKE
 key     217         SEARCH      WAKE
 key     352         DPAD_CENTER WAKE
-key     464         ALT_LEFT     
+#key     464         ALT_LEFT
+key     212         ALT_LEFT
 key     60          AT
-key     212         CAMERA
+#key     212         CAMERA
+key     464         CAMERA
 key     113         MUTE
 #key     61          APP
