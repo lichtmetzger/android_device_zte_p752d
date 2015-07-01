@@ -1,4 +1,4 @@
-ifeq ($(TARGET_BOOTLOADER_BOARD_NAME),p752d)
+ifeq ($(TARGET_BOOTLOADER_BOARD_NAME),tureis)
 
 LOCAL_PATH := $(call my-dir)
 
