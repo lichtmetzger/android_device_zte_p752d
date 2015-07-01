@@ -27,7 +27,7 @@ PRODUCT_PACKAGES += \
     
 # Camera
 PRODUCT_PACKAGES += \
-    libcamera
+    camera.msm7x27a
 
 # GPS
 PRODUCT_PACKAGES += \
