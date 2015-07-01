@@ -215,7 +215,3 @@ service abtfilt /system/bin/abtfilt -c -d -z -n
     class main
     disabled
     oneshot
-
-service akmd /system/bin/akmd8962
-    user root
-    oneshot
