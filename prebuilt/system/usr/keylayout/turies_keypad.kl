@@ -82,7 +82,8 @@ key     127         SYM
 key     139         MENU        WAKE
 key     158         BACK        WAKE
 key     217         SEARCH      WAKE
-key     352         DPAD_CENTER WAKE
+#key     352         DPAD_CENTER WAKE
+key     352         ENTER       WAKE
 #key     464         ALT_LEFT
 key     212         ALT_LEFT
 key     60          AT
