@@ -54,16 +54,14 @@
 /dev/snd/*                0660   system     audio
 /dev/mt9t013              0660   system     system
 /dev/msm_camera/*         0660   system     camera
-/dev/akm8976_daemon       0640   compass    system
-/dev/akm8976_aot          0640   compass    system
-/dev/akm8973_daemon       0640   compass    system
-/dev/akm8973_aot          0640   compass    system
-/dev/akm8962_dev          0660   compass    system
+
+# Sensors -Jellybean
+/dev/akm8962_aot            0666   system   system
+/dev/akm8962_daemon         0666   system   system
+/dev/akm8962_dev            0666   system   system
 
 /dev/bma150               0640   compass    system
 /dev/cm3602               0640   compass    system
-/dev/akm8976_pffd         0640   compass    system
-/dev/lightsensor          0640   system     system
 /dev/radio0               0644   fm_radio   fm_radio
 /dev/i2c-0                0664   root       system
 /dev/i2c-1                0664   root       system

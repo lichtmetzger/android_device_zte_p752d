@@ -47,6 +47,10 @@ PRODUCT_PACKAGES += \
 # Power HAL
 PRODUCT_PACKAGES += \
     power.msm7x27a
+    
+# Sensors
+PRODUCT_PACKAGES += \
+    sensors.tureis
 
 # Video
 PRODUCT_PACKAGES += \
