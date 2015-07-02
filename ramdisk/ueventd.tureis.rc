@@ -54,6 +54,7 @@
 /dev/snd/*                0660   system     audio
 /dev/mt9t013              0660   system     system
 /dev/msm_camera/*         0660   system     camera
+/dev/graphics/fb0         0666   system     camera
 
 # Sensors -Jellybean
 /dev/akm8962_aot            0666   system   system
