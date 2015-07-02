@@ -33,14 +33,8 @@ __BEGIN_DECLS
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
-#define ID_A  (0)
-#define ID_M  (1)
-#define ID_O  (2)
-#define ID_L  (3)
-#define ID_P  (4)
-#define ID_GY (5)
-#define ID_PRESS (6)
-#define ID_TEMP  (7)
+#define ID_L  (0)
+#define ID_P  (1)
 
 /*****************************************************************************/
 
