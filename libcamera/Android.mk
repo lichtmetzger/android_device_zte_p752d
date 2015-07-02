@@ -10,6 +10,10 @@ LOCAL_MODULE         := camera.$(TARGET_BOARD_PLATFORM)
 
 LOCAL_PRELINK_MODULE := false
 
+# hack for prebuilt
+$(shell mkdir -p $(OUT)/obj/SHARED_LIBRARIES/libcamera_intermediates/)
+$(shell touch $(OUT)/obj/SHARED_LIBRARIES/libcamera_intermediates/export_includes) 
+
 LOCAL_SHARED_LIBRARIES := liblog libdl libutils libcamera_client libbinder libcutils libhardware libcamera libui
 LOCAL_C_INCLUDES       := frameworks/av/include frameworks/base/include frameworks/native/include
 LOCAL_C_INCLUDES       += hardware/libhardware/include/ hardware
