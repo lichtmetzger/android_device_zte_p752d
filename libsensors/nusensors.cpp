@@ -47,7 +47,7 @@ private:
     enum {
         prox            = 0,
 	light           = 1,
-        akm             = 2,
+        /*akm             = 2,*/
         numSensorDrivers,
         numFds,
     };
@@ -60,10 +60,10 @@ private:
 
     int handleToDriver(int handle) const {
         switch (handle) {
-            case ID_A:
+            /*case ID_A:
             case ID_M:
             case ID_O:
-                return akm;
+                return akm;*/
             case ID_P:
                 return prox;
             case ID_L:
@@ -101,10 +101,10 @@ sensors_poll_context_t::sensors_poll_context_t()
         mPollFds[light].events = POLLIN;
         mPollFds[light].revents = 0;
     }
-    mSensors[akm] = new AkmSensor();
+    /*mSensors[akm] = new AkmSensor();
     mPollFds[akm].fd = mSensors[akm]->getFd();
     mPollFds[akm].events = POLLIN;
-    mPollFds[akm].revents = 0;
+    mPollFds[akm].revents = 0;*/
 
     int wakeFds[2];
     int result = pipe(wakeFds);

@@ -32,7 +32,7 @@
  */
 
 static const struct sensor_t sTaosLIS302SensorList[] = {
-        { "LIS302DL 3-axis Accelerometer",
+        /*{ "LIS302DL 3-axis Accelerometer",
                 "ST Microelectronics",
                 1, SENSORS_HANDLE_BASE+ID_A,
                 SENSOR_TYPE_ACCELEROMETER, 4.0f*9.81f, (4.0f*9.81f)/256.0f, 0.2f, 0, { } },
@@ -43,7 +43,7 @@ static const struct sensor_t sTaosLIS302SensorList[] = {
         { "AK8962 Orientation sensor",
                 "Asahi Kasei",
                 1, SENSORS_HANDLE_BASE+ID_O,
-                SENSOR_TYPE_ORIENTATION, 360.0f, 1.0f, 7.0f, 0, { } },
+                SENSOR_TYPE_ORIENTATION, 360.0f, 1.0f, 7.0f, 0, { } },*/
         { "Taos Proximity sensor",
                 "Taos Inc.",
                 1, SENSORS_HANDLE_BASE+ID_P,
@@ -57,7 +57,7 @@ static const struct sensor_t sTaosLIS302SensorList[] = {
 };
 
 static const struct sensor_t sTaosADXL34xSensorList[] = {
-        { "LIS333DE/ADXL346 3-axis Accelerometer",
+        /*{ "LIS333DE/ADXL346 3-axis Accelerometer",
                 "Analog Devices",
                 1, SENSORS_HANDLE_BASE+ID_A,
                 SENSOR_TYPE_ACCELEROMETER, 4.0f*9.81f, (4.0f*9.81f)/256.0f, 0.2f, 0, { } },
@@ -68,7 +68,7 @@ static const struct sensor_t sTaosADXL34xSensorList[] = {
         { "AK8962 Orientation sensor",
                 "Asahi Kasei",
                 1, SENSORS_HANDLE_BASE+ID_O,
-                SENSOR_TYPE_ORIENTATION, 360.0f, 1.0f, 7.0f, 0, { } },
+                SENSOR_TYPE_ORIENTATION, 360.0f, 1.0f, 7.0f, 0, { } },*/
         { "Taos Proximity sensor",
                 "Taos Inc.",
                 1, SENSORS_HANDLE_BASE+ID_P,
@@ -82,7 +82,7 @@ static const struct sensor_t sTaosADXL34xSensorList[] = {
 };
 
 static const struct sensor_t sISLLIS302SensorList[] = {
-        { "LIS302DL 3-axis Accelerometer",
+        /*{ "LIS302DL 3-axis Accelerometer",
                 "ST Microelectronics",
                 1, SENSORS_HANDLE_BASE+ID_A,
                 SENSOR_TYPE_ACCELEROMETER, 4.0f*9.81f, (4.0f*9.81f)/256.0f, 0.2f, 0, { } },
@@ -93,7 +93,7 @@ static const struct sensor_t sISLLIS302SensorList[] = {
         { "AK8992 Orientation sensor",
                 "Asahi Kasei",
                 1, SENSORS_HANDLE_BASE+ID_O,
-                SENSOR_TYPE_ORIENTATION, 360.0f, 1.0f, 7.0f, 0, { } },
+                SENSOR_TYPE_ORIENTATION, 360.0f, 1.0f, 7.0f, 0, { } },*/
         { "ISL29026 Proximity sensor",
                 "Intersil",
                 1, SENSORS_HANDLE_BASE+ID_P,
@@ -107,7 +107,7 @@ static const struct sensor_t sISLLIS302SensorList[] = {
 };
 
 static const struct sensor_t sISLADXL34xSensorList[] = {
-		{ "LIS333DE/ADXL346 3-axis Accelerometer",
+		/*{ "LIS333DE/ADXL346 3-axis Accelerometer",
 				"Analog Devices",
 				1, SENSORS_HANDLE_BASE+ID_A,
 				SENSOR_TYPE_ACCELEROMETER, 4.0f*9.81f, (4.0f*9.81f)/256.0f, 0.2f, 0, { } },
@@ -118,7 +118,7 @@ static const struct sensor_t sISLADXL34xSensorList[] = {
         { "AK8962 Orientation sensor",
                 "Asahi Kasei",
                 1, SENSORS_HANDLE_BASE+ID_O,
-                SENSOR_TYPE_ORIENTATION, 360.0f, 1.0f, 7.0f, 0, { } },
+                SENSOR_TYPE_ORIENTATION, 360.0f, 1.0f, 7.0f, 0, { } },*/
         { "ISL29026 Proximity sensor",
                 "Intersil",
                 1, SENSORS_HANDLE_BASE+ID_P,
@@ -162,7 +162,7 @@ struct sensors_module_t HAL_MODULE_INFO_SYM = {
         .version_major = 1,
         .version_minor = 0,
         .id = SENSORS_HARDWARE_MODULE_ID,
-        .name = "ZTE Warp Sensors Module",
+        .name = "ZTE SmartChat Sensors Module",
         .author = "Derek Midkiff",
         .methods = &sensors_module_methods,
     },
