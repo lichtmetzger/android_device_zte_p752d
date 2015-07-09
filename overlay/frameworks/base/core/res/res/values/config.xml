@@ -61,7 +61,7 @@
 
     <!-- Flag indicating whether the we should enable the automatic brightness in Settings.
          Software implementation will be used if config_hardware_auto_brightness_available is not set -->
-    <bool name="config_automatic_brightness_available">false</bool>
+    <bool name="config_automatic_brightness_available">true</bool>
 
     <!-- Display low battery warning when battery level dips to this value.
          Also, the battery stats are flushed to disk when we hit this level.  -->
