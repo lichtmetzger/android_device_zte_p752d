@@ -14,60 +14,49 @@
  * limitations under the License.
  */
 
-#ifndef ANDROID_TSL2771_SENSOR_H
-#define ANDROID_TSL2771_SENSOR_H
+#ifndef ANDROID_AKM_SENSOR_H
+#define ANDROID_AKM_SENSOR_H
 
 #include <stdint.h>
 #include <errno.h>
 #include <sys/cdefs.h>
 #include <sys/types.h>
 
-#include "sensors.h"
+
+#include "nusensors.h"
 #include "SensorBase.h"
 #include "InputEventReader.h"
-
-#define PROX_INPUT_NAME    "tsl2771_prox"
-#define ALS_INPUT_NAME     "tsl2771_als"
-
-#define PROX_NEAR_LEN 2.0f
-#define PROX_FAR_LEN 8.0f
-#define PROX_NEAR_THRESHOLD 0x200
 
 /*****************************************************************************/
 
 struct input_event;
 
-class TSL2771Sensor : public SensorBase {
+class AkmSensor : public SensorBase {
 public:
-            TSL2771Sensor(const char *name);
-    virtual ~TSL2771Sensor();
+            AkmSensor();
+    virtual ~AkmSensor();
 
     enum {
-        light   = 0,
-        proximity = 1,
+        Accelerometer   = 0,
+        MagneticField   = 1,
+        Orientation     = 2,
         numSensors
     };
 
-    int setInitialState();
-    float mPreviousLight;
-    float indexToValue(size_t index) const;
-
-    virtual int readEvents(sensors_event_t* data, int count);
-    virtual bool hasPendingEvents() const;
     virtual int setDelay(int32_t handle, int64_t ns);
     virtual int enable(int32_t handle, int enabled);
+    virtual int readEvents(sensors_event_t* data, int count);
+    void processEvent(int code, int value);
 
 private:
-    int mEnabled;
+    int update_delay();
+    uint32_t mEnabled;
     uint32_t mPendingMask;
     InputEventCircularReader mInputReader;
     sensors_event_t mPendingEvents[numSensors];
-    bool mHasPendingEvent;
-    char input_sysfs_path[PATH_MAX];
-    int input_sysfs_path_len;
-
+    uint64_t mDelays[numSensors];
 };
 
 /*****************************************************************************/
 
-#endif  // ANDROID_TSL2771_SENSOR_H
+#endif  // ANDROID_AKM_SENSOR_H

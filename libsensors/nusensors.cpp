@@ -13,95 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#define LOG_TAG "Sensors"
-
+#define LOG_NDEBUG 0
 #include <hardware/sensors.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <dirent.h>
 #include <math.h>
+
 #include <poll.h>
 #include <pthread.h>
-#include <stdlib.h>
 
 #include <linux/input.h>
 
-#include <utils/Atomic.h>
-#include <utils/Log.h>
+#include <cutils/atomic.h>
+#include <cutils/log.h>
 
-#include "sensors.h"
-
-#include "TSL2771Sensor.h"
-
+#include "nusensors.h"
+#include "V9Proximity.h"
+#include "V9Light.h"
+#include "AkmSensor.h"
 /*****************************************************************************/
-
-#define DELAY_OUT_TIME 0x7FFFFFFF
-
-#define LIGHT_SENSOR_POLLTIME    2000000000
-
-
-#define SENSORS_ACCELERATION     (1<<ID_A)
-#define SENSORS_MAGNETIC_FIELD   (1<<ID_M)
-#define SENSORS_ORIENTATION      (1<<ID_O)
-#define SENSORS_LIGHT            (1<<ID_L)
-#define SENSORS_PROXIMITY        (1<<ID_P)
-#define SENSORS_GYROSCOPE        (1<<ID_GY)
-#define SENSORS_PRESSURE         (1<<ID_PRESS)
-#define SENSORS_TEMPERATURE      (1<<ID_TEMP)
-
-#define SENSORS_ACCELERATION_HANDLE     0
-#define SENSORS_MAGNETIC_FIELD_HANDLE   1
-#define SENSORS_ORIENTATION_HANDLE      2
-#define SENSORS_LIGHT_HANDLE            3
-#define SENSORS_PROXIMITY_HANDLE        4
-#define SENSORS_GYROSCOPE_HANDLE        5
-#define SENSORS_PRESSURE_HANDLE         6
-#define SENSORS_TEMPERATURE_HANDLE      7
-
-
-/*****************************************************************************/
-
-/* The SENSORS Module */
-static const struct sensor_t sSensorList[] = {
-        { "TAOS TSL2771 Light sensor",
-          "TAOS",
-          1, SENSORS_LIGHT_HANDLE,
-          SENSOR_TYPE_LIGHT, 27000.0f, 1.0f, 0.75f, 0, { } },
-        { "TAOS TSL2771 Proximity sensor",
-          "TAOS",
-          1, SENSORS_PROXIMITY_HANDLE,
-          SENSOR_TYPE_PROXIMITY, 5.0f, 5.0f, 0.75f, 0, { } },
-};
-
-
-static int open_sensors(const struct hw_module_t* module, const char* id,
-                        struct hw_device_t** device);
-
-
-static int sensors__get_sensors_list(struct sensors_module_t* module,
-                                     struct sensor_t const** list)
-{
-        *list = sSensorList;
-        return ARRAY_SIZE(sSensorList);
-}
-
-static struct hw_module_methods_t sensors_module_methods = {
-        open: open_sensors
-};
-
-struct sensors_module_t HAL_MODULE_INFO_SYM = {
-        common: {
-                tag: HARDWARE_MODULE_TAG,
-                version_major: 1,
-                version_minor: 0,
-                id: SENSORS_HARDWARE_MODULE_ID,
-                name: "Vodafone SmartChat 865 Sensor module",
-                author: "Ronny Schmatzler",
-                methods: &sensors_module_methods,
-        },
-        get_sensors_list: sensors__get_sensors_list,
-};
 
 struct sensors_poll_context_t {
     struct sensors_poll_device_t device; // must be first
@@ -114,12 +45,11 @@ struct sensors_poll_context_t {
 
 private:
     enum {
-        light           = 0,
-        prox            = 1,
+        prox            = 0,
+	light           = 1,
+        akm             = 2,
         numSensorDrivers,
         numFds,
-
-
     };
 
     static const size_t wake = numFds - 1;
@@ -130,20 +60,15 @@ private:
 
     int handleToDriver(int handle) const {
         switch (handle) {
-            /*case ID_A:
-                return accel;
+            case ID_A:
             case ID_M:
             case ID_O:
-                return magno;*/
+                return akm;
             case ID_P:
-                 return prox;
+                return prox;
             case ID_L:
-                return light;
-            /*case ID_PRESS:
-            case ID_TEMP:
-                return press_temp;
-            case ID_GY:
-                return gyro;*/
+	        return light;
+	        break;
         }
         return -EINVAL;
     }
@@ -153,35 +78,33 @@ private:
 
 sensors_poll_context_t::sensors_poll_context_t()
 {
-    /*mSensors[accel] = new AccelSensor();
-    mPollFds[accel].fd = mSensors[accel]->getFd();
-    mPollFds[accel].events = POLLIN;
-    mPollFds[accel].revents = 0;
+    if(fopen(TAOS_DEVICE_NAME,"rw")) {
+        ALOGD("Using taos prox/light sensor");
+        mSensors[prox] = new V9Proximity(const_cast<char *>(TAOS_DEVICE_NAME));
+        mPollFds[prox].fd = mSensors[prox]->getFd();
+        mPollFds[prox].events = POLLIN;
+        mPollFds[prox].revents = 0;
 
-    mSensors[press_temp] = new BMP085Sensor();
-    mPollFds[press_temp].fd = mSensors[press_temp]->getFd();
-    mPollFds[press_temp].events = POLLIN;
-    mPollFds[press_temp].revents = 0;
+        mSensors[light] = new V9Light(const_cast<char *>(TAOS_DEVICE_NAME));
+        mPollFds[light].fd = mSensors[light]->getFd();
+        mPollFds[light].events = POLLIN;
+        mPollFds[light].revents = 0;
+    } else {
+        ALOGD("Using ISL prox/light sensor");
+        mSensors[prox] = new V9Proximity(const_cast<char *>(ISL_DEVICE_NAME));
+        mPollFds[prox].fd = mSensors[prox]->getFd();
+        mPollFds[prox].events = POLLIN;
+        mPollFds[prox].revents = 0;
 
-    mSensors[magno] = new HMC5843Sensor();
-    mPollFds[magno].fd = mSensors[magno]->getFd();
-    mPollFds[magno].events = POLLIN;
-    mPollFds[magno].revents = 0;
-
-    mSensors[gyro] = new MPU3050Sensor();
-    mPollFds[gyro].fd = mSensors[gyro]->getFd();
-    mPollFds[gyro].events = POLLIN;
-    mPollFds[gyro].revents = 0;*/
-
-    mSensors[light] = new TSL2771Sensor(ALS_INPUT_NAME);
-    mPollFds[light].fd = mSensors[light]->getFd();
-    mPollFds[light].events = POLLIN;
-    mPollFds[light].revents = 0;
-
-    mSensors[prox] = new TSL2771Sensor(PROX_INPUT_NAME);
-    mPollFds[prox].fd = mSensors[prox]->getFd();
-    mPollFds[prox].events = POLLIN;
-    mPollFds[prox].revents = 0;
+        mSensors[light] = new V9Light(const_cast<char *>(ISL_DEVICE_NAME));
+        mPollFds[light].fd = mSensors[light]->getFd();
+        mPollFds[light].events = POLLIN;
+        mPollFds[light].revents = 0;
+    }
+    mSensors[akm] = new AkmSensor();
+    mPollFds[akm].fd = mSensors[akm]->getFd();
+    mPollFds[akm].events = POLLIN;
+    mPollFds[akm].revents = 0;
 
     int wakeFds[2];
     int result = pipe(wakeFds);
@@ -206,6 +129,7 @@ sensors_poll_context_t::~sensors_poll_context_t() {
 int sensors_poll_context_t::activate(int handle, int enabled) {
     int index = handleToDriver(handle);
     if (index < 0) return index;
+    ALOGI("mSensors[%i]->enable(%i, %i)",index, handle, enabled);
     int err =  mSensors[index]->enable(handle, enabled);
     if (enabled && !err) {
         const char wakeMessage(WAKE_MESSAGE);
@@ -297,26 +221,22 @@ static int poll__poll(struct sensors_poll_device_t *dev,
 
 /*****************************************************************************/
 
-/** Open a new instance of a sensor device using name */
-static int open_sensors(const struct hw_module_t* module, const char* id,
-                        struct hw_device_t** device)
+int init_nusensors(hw_module_t const* module, hw_device_t** device)
 {
-        int status = -EINVAL;
-        sensors_poll_context_t *dev = new sensors_poll_context_t();
+    int status = -EINVAL;
 
-        memset(&dev->device, 0, sizeof(sensors_poll_device_t));
+    sensors_poll_context_t *dev = new sensors_poll_context_t();
+    memset(&dev->device, 0, sizeof(sensors_poll_device_t));
 
-        dev->device.common.tag = HARDWARE_DEVICE_TAG;
-        dev->device.common.version  = 0;
-        dev->device.common.module   = const_cast<hw_module_t*>(module);
-        dev->device.common.close    = poll__close;
-        dev->device.activate        = poll__activate;
-        dev->device.setDelay        = poll__setDelay;
-        dev->device.poll            = poll__poll;
+    dev->device.common.tag = HARDWARE_DEVICE_TAG;
+    dev->device.common.version  = 0;
+    dev->device.common.module   = const_cast<hw_module_t*>(module);
+    dev->device.common.close    = poll__close;
+    dev->device.activate        = poll__activate;
+    dev->device.setDelay        = poll__setDelay;
+    dev->device.poll            = poll__poll;
 
-        *device = &dev->device.common;
-        status = 0;
-
-        return status;
+    *device = &dev->device.common;
+    status = 0;
+    return status;
 }
-

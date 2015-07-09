@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef ANDROID_PROXIMITY_SENSOR_H
-#define ANDROID_PROXIMITY_SENSOR_H
+#ifndef ANDROID_PS_ALS_LIGHT_H
+#define ANDROID_PS_ALS_LIGHT_H
 
 #include <stdint.h>
 #include <errno.h>
 #include <sys/cdefs.h>
 #include <sys/types.h>
 
-#include "sensors.h"
+#include "nusensors.h"
 #include "SensorBase.h"
 #include "InputEventReader.h"
 
@@ -30,25 +30,22 @@
 
 struct input_event;
 
-class ProximitySensor : public SensorBase {
-    int mEnabled;
-    InputEventCircularReader mInputReader;
-    sensors_event_t mPendingEvent;
-    bool mHasPendingEvent;
-    char input_sysfs_path[PATH_MAX];
-    int input_sysfs_path_len;
-
-    int setInitialState();
-    float indexToValue(size_t index) const;
+class V9Light : public SensorBase {
+  const static uint DEBUG = 0;
+  uint mEnabled;
+  InputEventCircularReader mInputReader;
+  uint32_t mPendingMask;
+  int setInitialState();
 
 public:
-            ProximitySensor();
-    virtual ~ProximitySensor();
-    virtual int readEvents(sensors_event_t* data, int count);
-    virtual bool hasPendingEvents() const;
-    virtual int enable(int32_t handle, int enabled);
+  V9Light(char *dev);
+  virtual ~V9Light();
+  virtual int readEvents(sensors_event_t* data, int count);
+  virtual bool hasPendingEvents() const;
+  virtual int enable(int32_t handle, int enabled);
+  sensors_event_t mPendingEvents;
 };
 
 /*****************************************************************************/
 
-#endif  // ANDROID_PROXIMITY_SENSOR_H
+#endif  // ANDROID_PS_ALS_LIGHT_H

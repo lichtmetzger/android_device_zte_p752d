@@ -14,51 +14,45 @@
  * limitations under the License.
  */
 
-#ifndef ANDROID_SENSOR_BASE_H
-#define ANDROID_SENSOR_BASE_H
+#ifndef ANDROID_PS_ALS_PROX_H
+#define ANDROID_PS_ALS_PROX_H
 
 #include <stdint.h>
 #include <errno.h>
 #include <sys/cdefs.h>
 #include <sys/types.h>
 
+#include "nusensors.h"
+#include "SensorBase.h"
+#include "InputEventReader.h"
 
 /*****************************************************************************/
 
-struct sensors_event_t;
+#define PROX_FILE      "/data/misc/prox_data.txt"
 
-class SensorBase {
-protected:
-    const char* dev_name;
-    const char* data_name;
-    int         dev_fd;
-    int         data_fd;
+struct input_event;
 
-    static int openInput(const char* inputName);
-    static int64_t getTimestamp();
+class V9Proximity : public SensorBase {
+  const static uint DEBUG = 0;
+  uint mEnabled;
+  InputEventCircularReader mInputReader;
+  uint32_t mPendingMask;
 
+  int mInitialised;
 
-    static int64_t timevalToNano(timeval const& t) {
-        return t.tv_sec*1000000000LL + t.tv_usec*1000;
-    }
-
-    int open_device();
-    int close_device();
+  int initialise();
+  int setInitialState();
+  float indexToValue(size_t index) const;
 
 public:
-            SensorBase(
-                    const char* dev_name,
-                    const char* data_name);
-
-    virtual ~SensorBase();
-
-    virtual int readEvents(sensors_event_t* data, int count) = 0;
-    virtual bool hasPendingEvents() const;
-    virtual int getFd() const;
-    virtual int setDelay(int32_t handle, int64_t ns);
-    virtual int enable(int32_t handle, int enabled) = 0;
+  V9Proximity(char *dev);
+  virtual ~V9Proximity();
+  virtual int readEvents(sensors_event_t* data, int count);
+  virtual bool hasPendingEvents() const;
+  virtual int enable(int32_t handle, int enabled);
+  sensors_event_t mPendingEvents;
 };
 
 /*****************************************************************************/
 
-#endif  // ANDROID_SENSOR_BASE_H
+#endif  // ANDROID_PS_ALS_PROX_H
