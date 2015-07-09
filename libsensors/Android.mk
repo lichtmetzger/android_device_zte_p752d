@@ -34,8 +34,7 @@ LOCAL_SRC_FILES := 						\
 				InputEventReader.cpp		\
 				SensorBase.cpp			\
 				V9Proximity.cpp			\
-				V9Light.cpp			\
-				AkmSensor.cpp
+				V9Light.cpp
 
 LOCAL_SHARED_LIBRARIES := liblog libcutils
 LOCAL_PRELINK_MODULE := false
