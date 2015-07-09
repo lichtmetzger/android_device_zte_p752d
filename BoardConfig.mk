@@ -28,8 +28,6 @@ TARGET_CPU_ABI2 := armeabi
 TARGET_CPU_VARIANT := cortex-a5
 TARGET_ARCH_VARIANT := armv7-a-neon
 
-#TARGET_NO_HW_VSYNC := true
-
 ARCH_ARM_HAVE_TLS_REGISTER := true
 
 TARGET_GLOBAL_CFLAGS += -mtune=cortex-a5 -mfpu=neon -mfloat-abi=softfp
@@ -62,7 +60,6 @@ BOARD_ADRENO_DECIDE_TEXTURE_TARGET := true
 
 # Video
 TARGET_QCOM_LEGACY_OMX := true
-#TARGET_QCOM_LEGACY_MMPARSER := true
 TARGET_QCOM_MEDIA_VARIANT := legacy
 TARGET_ENABLE_QC_AV_ENHANCEMENTS := true
 COMMON_GLOBAL_CFLAGS += -DQCOM_NO_SECURE_PLAYBACK
@@ -124,16 +121,10 @@ TARGET_RECOVERY_FSTAB := device/zte/p752d/ramdisk/fstab.tureis
 BOARD_HAS_NO_SELECT_BUTTON := true
 
 # USB mounting
-TARGET_USE_CUSTOM_LUN_FILE_PATH := /sys/devices/platform/msm_hsusb/gadget/lun0/file
-BOARD_UMS_LUNFILE := "/sys/devices/platform/msm_hsusb/gadget/lun0/file"
-
-# default props
-ADDITIONAL_DEFAULT_PROPERTIES += ro.secure=0
-ADDITIONAL_DEFAULT_PROPERTIES += ro.allow.mock.location=0
-ADDITIONAL_DEFAULT_PROPERTIES += ro.debuggable=1
-ADDITIONAL_DEFAULT_PROPERTIES += persist.service.adb.enable=1
-ADDITIONAL_DEFAULT_PROPERTIES += ro.config.sec_storage=1
-ADDITIONAL_DEFAULT_PROPERTIES += persist.sys.usb.config=mass_storage,adb
+BOARD_UMS_LUNFILE := "sys/class/android_usb/f_mass_storage/lun/file"
+# CM should set this automatically, but it's not.
+# Can also be set to mtp (works as a camera) or adb for debugging.
+ADDITIONAL_DEFAULT_PROPERTIES += persist.sys.usb.config=mass_storage
 
 BOARD_BOOTIMAGE_PARTITION_SIZE := 8388608
 BOARD_RECOVERYIMAGE_PARTITION_SIZE := 12582912

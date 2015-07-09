@@ -4,21 +4,12 @@ on early-init
     mount debugfs debugfs /sys/kernel/debug
 
 on init
+    mkdir /storage 0775 system sdcard_r
+    mkdir /storage/sdcard0 0000 root root
     export EXTERNAL_STORAGE /storage/sdcard0
-    #export SECONDARY_STORAGE /storage/sdcard1
-
-    mkdir /storage 0050 system sdcard_r
-    mkdir /storage/sdcard0 0000 system system
-    #mkdir /storage/sdcard1 0000 system system
-    #mkdir /storage/usbdisk 0000 system system
-
     # for backwards compatibility
-    symlink /storage/sdcard0 /sdcard
     symlink /storage/sdcard0 /mnt/sdcard
-    symlink /storage/sdcard1 /external_sd
-    symlink /storage/sdcard1 /mnt/external_sd
-    symlink /storage/usbdisk /usbdisk
-    symlink /storage/usbdisk /mnt/usbdisk
+    symlink /storage/sdcard0 /sdcard
 
 on fs
     # mount mmc partitions
@@ -91,17 +82,11 @@ on boot
     chmod 2770 /dev/socket/qmux_bluetooth
 
     chmod 0444 /sys/devices/platform/msm_hsusb/gadget/usb_state
+    
+    write /sys/bus/platform/drivers/msm_sdcc/msm_sdcc.1/polling 1
 
     #For bridgemgr daemon to inform the USB driver of the correct transport
     chown radio radio /sys/class/android_usb/f_rmnet_smd_sdio/transport
-    
-    # Setup android gadget
-    write /sys/module/g_android/parameters/serial_number CM10.2-SmartChat
-    write /sys/module/g_android/parameters/product_id 0x1351
-    
-    # Enable MASS storage on SDCARD
-    write /sys/devices/platform/msm_hsusb/gadget/lun0/file /dev/block/mmcblk0p1
-    write /sys/bus/platform/drivers/msm_sdcc/msm_sdcc.1/polling 1
 
     #To allow interfaces to get v6 address when tethering is enabled
     write /proc/sys/net/ipv6/conf/rmnet0/accept_ra 2
@@ -135,13 +120,6 @@ on boot
     # Vibrator intensity
     chown system system /sys/vibrator/pwmvalue
     
-on property:ro.debuggable=1
-    start adbd
-
-# setup_adbd will start adb once it has checked the keys
-on property:service.adb.root=1
-    restart adbd
-
 on property:init.svc.wpa_supplicant=stopped
     stop dhcpcd
 
