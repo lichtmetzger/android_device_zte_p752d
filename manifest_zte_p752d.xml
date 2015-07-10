@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+    <!-- ZTE P752D -->
+    <project path="device/zte/p752d" name="schmatzler/android_device_zte_p752d" revision="master" />
+    <project path="kernel/zte/p752d" name="schmatzler/zte-kernel-smartchat" revision="master" />
+    <project path="vendor/zte/p752d" name="schmatzler/android_vendor_p752d" revision="master" />
+
+    <!-- FM Radio -->
+    <project path="hardware/qcom/fm" name="legaCyMod/android_hardware_qcom_fm" revision="cm-10.2" />
+    <project path="packages/apps/FM2" name="legaCyMod/android_packages_apps_FM2" revision="cm-10.2" />
+</manifest>
