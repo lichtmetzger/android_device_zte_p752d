@@ -121,7 +121,8 @@ TARGET_RECOVERY_FSTAB := device/zte/p752d/ramdisk/fstab.tureis
 BOARD_HAS_NO_SELECT_BUTTON := true
 
 # USB mounting
-BOARD_UMS_LUNFILE := "sys/class/android_usb/f_mass_storage/lun/file"
+TARGET_USE_CUSTOM_LUN_FILE_PATH := /sys/devices/platform/usb_mass_storage/lun0/file
+BOARD_UMS_LUNFILE := "/sys/devices/platform/usb_mass_storage/lun0/file"
 # CM should set this automatically, but it's not.
 # Can also be set to mtp (works as a camera) or adb for debugging.
 ADDITIONAL_DEFAULT_PROPERTIES += persist.sys.usb.config=mass_storage
