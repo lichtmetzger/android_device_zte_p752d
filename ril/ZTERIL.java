@@ -67,7 +67,7 @@ public class ZTERIL extends RIL implements CommandsInterface {
     public ZTERIL(Context context, int networkMode, int cdmaSubscription) {
         super(context, networkMode, cdmaSubscription);
         mSetPreferredNetworkType = -1;
-        mQANElements = 5;
+        mQANElements = 4;
     }
 
     @Override public void
