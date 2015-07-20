@@ -1,0 +1,2082 @@
+# This patch updates the openssl version bundled with CM10.2
+# to the version bundled with CM11.0.
+# Fixes Heartbleed, Freak attack and other things.
+
+diff -ur a/Apps.mk b/Apps.mk
+--- a/Apps.mk	2013-07-24 23:14:04.000000000 +0200
++++ b/Apps.mk	2015-03-17 02:24:59.000000000 +0100
+@@ -2,10 +2,6 @@
+ 
+ LOCAL_PATH:= $(call my-dir)
+ 
+-local_shared_libraries := \
+-	libssl \
+-	libcrypto
+-
+ local_c_includes :=
+ local_c_flags :=
+ 
+@@ -15,9 +11,10 @@
+ 
+ include $(CLEAR_VARS)
+ LOCAL_MODULE:= openssl
++LOCAL_CLANG := true
+ LOCAL_MODULE_TAGS := optional
+ LOCAL_SRC_FILES := $(target_src_files)
+-LOCAL_SHARED_LIBRARIES := $(local_shared_libraries)
++LOCAL_SHARED_LIBRARIES := libssl libcrypto
+ LOCAL_C_INCLUDES := $(target_c_includes)
+ LOCAL_CFLAGS := $(target_c_flags)
+ LOCAL_ADDITIONAL_DEPENDENCIES := $(local_additional_dependencies)
+@@ -28,7 +25,7 @@
+ LOCAL_MODULE:= openssl
+ LOCAL_MODULE_TAGS := optional
+ LOCAL_SRC_FILES := $(host_src_files)
+-LOCAL_SHARED_LIBRARIES := $(local_shared_libraries)
++LOCAL_SHARED_LIBRARIES := libssl-host libcrypto-host
+ LOCAL_C_INCLUDES := $(host_c_includes)
+ LOCAL_CFLAGS := $(host_c_flags)
+ LOCAL_ADDITIONAL_DEPENDENCIES := $(local_additional_dependencies)
+diff -ur a/Crypto.mk b/Crypto.mk
+--- a/Crypto.mk	2013-07-24 23:14:04.000000000 +0200
++++ b/Crypto.mk	2015-03-17 02:24:59.000000000 +0100
+@@ -13,7 +13,12 @@
+ 
+ LOCAL_SHARED_LIBRARIES := $(log_shared_libraries)
+ 
+-ifneq (,$(TARGET_BUILD_APPS))
++# If we're building an unbundled build, don't try to use clang since it's not
++# in the NDK yet. This can be removed when a clang version that is fast enough
++# in the NDK.
++ifeq (,$(TARGET_BUILD_APPS))
++LOCAL_CLANG := true
++else
+ LOCAL_SDK_VERSION := 9
+ endif
+ 
+@@ -32,7 +37,12 @@
+ 
+ LOCAL_SHARED_LIBRARIES := $(log_shared_libraries)
+ 
+-ifneq (,$(TARGET_BUILD_APPS))
++# If we're building an unbundled build, don't try to use clang since it's not
++# in the NDK yet. This can be removed when a clang version that is fast enough
++# in the NDK.
++ifeq (,$(TARGET_BUILD_APPS))
++LOCAL_CLANG := true
++else
+ LOCAL_SDK_VERSION := 9
+ endif
+ LOCAL_LDFLAGS += -ldl
+@@ -55,7 +65,7 @@
+ LOCAL_C_INCLUDES += $(host_c_includes)
+ LOCAL_LDLIBS += -ldl
+ LOCAL_MODULE_TAGS := optional
+-LOCAL_MODULE:= libcrypto
++LOCAL_MODULE:= libcrypto-host
+ LOCAL_ADDITIONAL_DEPENDENCIES := $(local_additional_dependencies)
+ include $(BUILD_HOST_SHARED_LIBRARY)
+ 
+diff -ur a/Ssl.mk b/Ssl.mk
+--- a/Ssl.mk	2013-07-24 23:14:04.000000000 +0200
++++ b/Ssl.mk	2015-03-17 02:24:59.000000000 +0100
+@@ -11,7 +11,12 @@
+ include $(CLEAR_VARS)
+ include $(LOCAL_PATH)/android-config.mk
+ 
+-ifneq (,$(TARGET_BUILD_APPS))
++# If we're building an unbundled build, don't try to use clang since it's not
++# in the NDK yet. This can be removed when a clang version that is fast enough
++# in the NDK.
++ifeq (,$(TARGET_BUILD_APPS))
++LOCAL_CLANG := true
++else
+ LOCAL_SDK_VERSION := 9
+ endif
+ 
+@@ -29,7 +34,12 @@
+ include $(CLEAR_VARS)
+ include $(LOCAL_PATH)/android-config.mk
+ 
+-ifneq (,$(TARGET_BUILD_APPS))
++# If we're building an unbundled build, don't try to use clang since it's not
++# in the NDK yet. This can be removed when a clang version that is fast enough
++# in the NDK.
++ifeq (,$(TARGET_BUILD_APPS))
++LOCAL_CLANG := true
++else
+ LOCAL_SDK_VERSION := 9
+ endif
+ 
+@@ -49,9 +59,9 @@
+ LOCAL_SRC_FILES += $(host_src_files)
+ LOCAL_CFLAGS += $(host_c_flags)
+ LOCAL_C_INCLUDES += $(host_c_includes)
+-LOCAL_SHARED_LIBRARIES += libcrypto $(log_shared_libraries)
++LOCAL_SHARED_LIBRARIES += libcrypto-host $(log_shared_libraries)
+ LOCAL_MODULE_TAGS := optional
+-LOCAL_MODULE:= libssl
++LOCAL_MODULE:= libssl-host
+ LOCAL_ADDITIONAL_DEPENDENCIES := $(local_additional_dependencies)
+ include $(BUILD_HOST_SHARED_LIBRARY)
+ 
+diff -ur a/android-config.mk b/android-config.mk
+--- a/android-config.mk	2013-07-24 23:14:04.000000000 +0200
++++ b/android-config.mk	2015-03-17 02:24:59.000000000 +0100
+@@ -25,3 +25,6 @@
+ 
+ # Debug
+ # LOCAL_CFLAGS += -DCIPHER_DEBUG
++
++# Add clang here when it works on host
++# LOCAL_CLANG := true
+diff -ur a/apps/s_client.c b/apps/s_client.c
+--- a/apps/s_client.c	2013-07-24 23:14:04.000000000 +0200
++++ b/apps/s_client.c	2015-03-17 02:24:59.000000000 +0100
+@@ -335,6 +335,7 @@
+ 	BIO_printf(bio_err," -tls1_1       - just use TLSv1.1\n");
+ 	BIO_printf(bio_err," -tls1         - just use TLSv1\n");
+ 	BIO_printf(bio_err," -dtls1        - just use DTLSv1\n");    
++	BIO_printf(bio_err," -fallback_scsv - send TLS_FALLBACK_SCSV\n");
+ 	BIO_printf(bio_err," -mtu          - set the link layer MTU\n");
+ 	BIO_printf(bio_err," -no_tls1_2/-no_tls1_1/-no_tls1/-no_ssl3/-no_ssl2 - turn off that protocol\n");
+ 	BIO_printf(bio_err," -bugs         - Switch on all SSL implementation bug workarounds\n");
+@@ -359,6 +360,7 @@
+ 	BIO_printf(bio_err," -no_ticket        - disable use of RFC4507bis session tickets\n");
+ # ifndef OPENSSL_NO_NEXTPROTONEG
+ 	BIO_printf(bio_err," -nextprotoneg arg - enable NPN extension, considering named protocols supported (comma-separated list)\n");
++	BIO_printf(bio_err," -alpn arg         - enable ALPN extension, considering named protocols supported (comma-separated list)\n");
+ # endif
+ #endif
+ 	BIO_printf(bio_err," -cutthrough       - enable 1-RTT full-handshake for strong ciphers\n");
+@@ -611,12 +613,14 @@
+         {NULL,0};
+ # ifndef OPENSSL_NO_NEXTPROTONEG
+ 	const char *next_proto_neg_in = NULL;
++	const char *alpn_in = NULL;
+ # endif
+ #endif
+ 	char *sess_in = NULL;
+ 	char *sess_out = NULL;
+ 	struct sockaddr peer;
+ 	int peerlen = sizeof(peer);
++	int fallback_scsv = 0;
+ 	int enable_timeouts = 0 ;
+ 	long socket_mtu = 0;
+ #ifndef OPENSSL_NO_JPAKE
+@@ -823,6 +827,10 @@
+ 			meth=DTLSv1_client_method();
+ 			socket_type=SOCK_DGRAM;
+ 			}
++		else if (strcmp(*argv,"-fallback_scsv") == 0)
++			{
++			fallback_scsv = 1;
++			}
+ 		else if (strcmp(*argv,"-timeout") == 0)
+ 			enable_timeouts=1;
+ 		else if (strcmp(*argv,"-mtu") == 0)
+@@ -883,6 +891,11 @@
+ 			if (--argc < 1) goto bad;
+ 			next_proto_neg_in = *(++argv);
+ 			}
++		else if (strcmp(*argv,"-alpn") == 0)
++			{
++			if (--argc < 1) goto bad;
++			alpn_in = *(++argv);
++			}
+ # endif
+ #endif
+ 		else if (strcmp(*argv,"-cutthrough") == 0)
+@@ -1157,9 +1170,23 @@
+ 	 */
+ 	if (socket_type == SOCK_DGRAM) SSL_CTX_set_read_ahead(ctx, 1);
+ 
+-#if !defined(OPENSSL_NO_TLSEXT) && !defined(OPENSSL_NO_NEXTPROTONEG)
++#if !defined(OPENSSL_NO_TLSEXT)
++# if !defined(OPENSSL_NO_NEXTPROTONEG)
+ 	if (next_proto.data)
+ 		SSL_CTX_set_next_proto_select_cb(ctx, next_proto_cb, &next_proto);
++# endif
++	if (alpn_in)
++		{
++		unsigned short alpn_len;
++		unsigned char *alpn = next_protos_parse(&alpn_len, alpn_in);
++
++		if (alpn == NULL)
++			{
++			BIO_printf(bio_err, "Error parsing -alpn argument\n");
++			goto end;
++			}
++		SSL_CTX_set_alpn_protos(ctx, alpn, alpn_len);
++		}
+ #endif
+ 
+ 	/* Enable handshake cutthrough for client connections using
+@@ -1246,6 +1273,10 @@
+ 		SSL_set_session(con, sess);
+ 		SSL_SESSION_free(sess);
+ 		}
++
++	if (fallback_scsv)
++		SSL_set_mode(con, SSL_MODE_SEND_FALLBACK_SCSV);
++
+ #ifndef OPENSSL_NO_TLSEXT
+ 	if (servername != NULL)
+ 		{
+@@ -2077,7 +2108,8 @@
+ 	}
+ #endif
+ 
+-#if !defined(OPENSSL_NO_TLSEXT) && !defined(OPENSSL_NO_NEXTPROTONEG)
++#if !defined(OPENSSL_NO_TLSEXT)
++# if !defined(OPENSSL_NO_NEXTPROTONEG)
+ 	if (next_proto.status != -1) {
+ 		const unsigned char *proto;
+ 		unsigned int proto_len;
+@@ -2086,6 +2118,20 @@
+ 		BIO_write(bio, proto, proto_len);
+ 		BIO_write(bio, "\n", 1);
+ 	}
++	{
++		const unsigned char *proto;
++		unsigned int proto_len;
++		SSL_get0_alpn_selected(s, &proto, &proto_len);
++		if (proto_len > 0)
++			{
++			BIO_printf(bio, "ALPN protocol: ");
++			BIO_write(bio, proto, proto_len);
++			BIO_write(bio, "\n", 1);
++			}
++		else
++			BIO_printf(bio, "No ALPN negotiated\n");
++	}
++# endif
+ #endif
+ 
+ #ifndef OPENSSL_NO_SRTP
+diff -ur a/crypto/err/openssl.ec b/crypto/err/openssl.ec
+--- a/crypto/err/openssl.ec	2013-07-24 23:14:04.000000000 +0200
++++ b/crypto/err/openssl.ec	2015-03-17 02:24:59.000000000 +0100
+@@ -71,6 +71,7 @@
+ R SSL_R_TLSV1_ALERT_PROTOCOL_VERSION		1070
+ R SSL_R_TLSV1_ALERT_INSUFFICIENT_SECURITY	1071
+ R SSL_R_TLSV1_ALERT_INTERNAL_ERROR		1080
++R SSL_R_SSLV3_ALERT_INAPPROPRIATE_FALLBACK	1086
+ R SSL_R_TLSV1_ALERT_USER_CANCELLED		1090
+ R SSL_R_TLSV1_ALERT_NO_RENEGOTIATION		1100
+ R SSL_R_TLSV1_UNSUPPORTED_EXTENSION		1110
+diff -ur a/import_openssl.sh b/import_openssl.sh
+--- a/import_openssl.sh	2013-07-24 23:14:04.000000000 +0200
++++ b/import_openssl.sh	2015-03-17 02:24:59.000000000 +0100
+@@ -87,7 +87,7 @@
+     declare -r patch=$1
+     shift || usage "No patch file specified."
+     [ -d $OPENSSL_DIR ] || usage "$OPENSSL_DIR not found, did you mean to use generate?"
+-    [ -d $OPENSSL_DIR_ORIG_ORIG ] || usage "$OPENSSL_DIR_ORIG not found, did you mean to use generate?"
++    [ -d $OPENSSL_DIR_ORIG ] || usage "$OPENSSL_DIR_ORIG not found, did you mean to use generate?"
+     regenerate $patch
+   elif [ "$command" = "generate" ]; then
+     declare -r patch=$1
+diff -ur a/include/openssl/dtls1.h b/include/openssl/dtls1.h
+--- a/include/openssl/dtls1.h	2013-07-24 23:14:04.000000000 +0200
++++ b/include/openssl/dtls1.h	2015-03-17 02:24:59.000000000 +0100
+@@ -84,6 +84,8 @@
+ #endif
+ 
+ #define DTLS1_VERSION			0xFEFF
++#define DTLS_MAX_VERSION		DTLS1_VERSION
++
+ #define DTLS1_BAD_VER			0x0100
+ 
+ #if 0
+@@ -284,4 +286,3 @@
+ }
+ #endif
+ #endif
+-
+diff -ur a/include/openssl/ssl.h b/include/openssl/ssl.h
+--- a/include/openssl/ssl.h	2013-07-24 23:14:04.000000000 +0200
++++ b/include/openssl/ssl.h	2015-03-17 02:24:59.000000000 +0100
+@@ -646,6 +646,11 @@
+  * one RTT. */
+ #define SSL_MODE_HANDSHAKE_CUTTHROUGH 0x00000020L
+ 
++/* Send TLS_FALLBACK_SCSV in the ClientHello.
++ * To be set by applications that reconnect with a downgraded protocol
++ * version; see draft-ietf-tls-downgrade-scsv-00 for details. */
++#define SSL_MODE_SEND_FALLBACK_SCSV 0x00000200L
++
+ /* Note: SSL[_CTX]_set_{options,mode} use |= op on the previous value,
+  * they cannot be used to clear bits. */
+ 
+@@ -979,6 +984,31 @@
+ 				    void *arg);
+ 	void *next_proto_select_cb_arg;
+ # endif
++
++	/* ALPN information
++	 * (we are in the process of transitioning from NPN to ALPN.) */
++
++	/* For a server, this contains a callback function that allows the
++	 * server to select the protocol for the connection.
++	 *   out: on successful return, this must point to the raw protocol
++	 *        name (without the length prefix).
++	 *   outlen: on successful return, this contains the length of |*out|.
++	 *   in: points to the client's list of supported protocols in
++	 *       wire-format.
++	 *   inlen: the length of |in|. */
++	int (*alpn_select_cb)(SSL *s,
++			      const unsigned char **out,
++			      unsigned char *outlen,
++			      const unsigned char* in,
++			      unsigned int inlen,
++			      void *arg);
++	void *alpn_select_cb_arg;
++
++	/* For a client, this contains the list of supported protocols in wire
++	 * format. */
++	unsigned char* alpn_client_proto_list;
++	unsigned alpn_client_proto_list_len;
++
+         /* SRTP profiles we are willing to do from RFC 5764 */
+         STACK_OF(SRTP_PROTECTION_PROFILE) *srtp_profiles;  
+ 
+@@ -1075,6 +1105,21 @@
+ #define OPENSSL_NPN_NO_OVERLAP	2
+ #endif
+ 
++int SSL_CTX_set_alpn_protos(SSL_CTX *ctx, const unsigned char* protos,
++			    unsigned protos_len);
++int SSL_set_alpn_protos(SSL *ssl, const unsigned char* protos,
++			unsigned protos_len);
++void SSL_CTX_set_alpn_select_cb(SSL_CTX* ctx,
++				int (*cb) (SSL *ssl,
++					   const unsigned char **out,
++					   unsigned char *outlen,
++					   const unsigned char *in,
++					   unsigned int inlen,
++					   void *arg),
++				void *arg);
++void SSL_get0_alpn_selected(const SSL *ssl, const unsigned char **data,
++			    unsigned *len);
++
+ #ifndef OPENSSL_NO_PSK
+ /* the maximum length of the buffer given to callbacks containing the
+  * resulting identity/psk */
+@@ -1365,6 +1410,11 @@
+ 	char tlsext_channel_id_enabled;
+ 	/* The client's Channel ID private key. */
+ 	EVP_PKEY *tlsext_channel_id_private;
++
++	/* For a client, this contains the list of supported protocols in wire
++	 * format. */
++	unsigned char* alpn_client_proto_list;
++	unsigned alpn_client_proto_list_len;
+ #else
+ #define session_ctx ctx
+ #endif /* OPENSSL_NO_TLSEXT */
+@@ -1525,6 +1575,7 @@
+ #define SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE TLS1_AD_BAD_CERTIFICATE_STATUS_RESPONSE
+ #define SSL_AD_BAD_CERTIFICATE_HASH_VALUE TLS1_AD_BAD_CERTIFICATE_HASH_VALUE
+ #define SSL_AD_UNKNOWN_PSK_IDENTITY     TLS1_AD_UNKNOWN_PSK_IDENTITY /* fatal */
++#define SSL_AD_INAPPROPRIATE_FALLBACK	TLS1_AD_INAPPROPRIATE_FALLBACK /* fatal */
+ 
+ #define SSL_ERROR_NONE			0
+ #define SSL_ERROR_SSL			1
+@@ -1638,6 +1689,8 @@
+ #define SSL_CTRL_GET_EXTRA_CHAIN_CERTS		82
+ #define SSL_CTRL_CLEAR_EXTRA_CHAIN_CERTS	83
+ 
++#define SSL_CTRL_CHECK_PROTO_VERSION		119
++
+ #define DTLSv1_get_timeout(ssl, arg) \
+ 	SSL_ctrl(ssl,DTLS_CTRL_GET_TIMEOUT,0, (void *)arg)
+ #define DTLSv1_handle_timeout(ssl) \
+@@ -2427,6 +2480,7 @@
+ #define SSL_R_HTTPS_PROXY_REQUEST			 155
+ #define SSL_R_HTTP_REQUEST				 156
+ #define SSL_R_ILLEGAL_PADDING				 283
++#define SSL_R_INAPPROPRIATE_FALLBACK			 380
+ #define SSL_R_INCONSISTENT_COMPRESSION			 340
+ #define SSL_R_INVALID_CHALLENGE_LENGTH			 158
+ #define SSL_R_INVALID_COMMAND				 280
+@@ -2576,6 +2630,7 @@
+ #define SSL_R_TLSV1_ALERT_DECRYPTION_FAILED		 1021
+ #define SSL_R_TLSV1_ALERT_DECRYPT_ERROR			 1051
+ #define SSL_R_TLSV1_ALERT_EXPORT_RESTRICTION		 1060
++#define SSL_R_TLSV1_ALERT_INAPPROPRIATE_FALLBACK	 1086
+ #define SSL_R_TLSV1_ALERT_INSUFFICIENT_SECURITY		 1071
+ #define SSL_R_TLSV1_ALERT_INTERNAL_ERROR		 1080
+ #define SSL_R_TLSV1_ALERT_NO_RENEGOTIATION		 1100
+@@ -2640,6 +2695,7 @@
+ #define SSL_R_WRONG_VERSION_NUMBER			 267
+ #define SSL_R_X509_LIB					 268
+ #define SSL_R_X509_VERIFICATION_SETUP_PROBLEMS		 269
++#define SSL_R_UNEXPECTED_CCS				 388
+ 
+ #ifdef  __cplusplus
+ }
+diff -ur a/include/openssl/ssl3.h b/include/openssl/ssl3.h
+--- a/include/openssl/ssl3.h	2013-07-24 23:14:04.000000000 +0200
++++ b/include/openssl/ssl3.h	2015-03-17 02:24:59.000000000 +0100
+@@ -128,9 +128,14 @@
+ extern "C" {
+ #endif
+ 
+-/* Signalling cipher suite value: from draft-ietf-tls-renegotiation-03.txt */
++/* Signalling cipher suite value from RFC 5746
++ * (TLS_EMPTY_RENEGOTIATION_INFO_SCSV) */
+ #define SSL3_CK_SCSV				0x030000FF
+ 
++/* Signalling cipher suite value from draft-ietf-tls-downgrade-scsv-00
++ * (TLS_FALLBACK_SCSV) */
++#define SSL3_CK_FALLBACK_SCSV			0x03005600
++
+ #define SSL3_CK_RSA_NULL_MD5			0x03000001
+ #define SSL3_CK_RSA_NULL_SHA			0x03000002
+ #define SSL3_CK_RSA_RC4_40_MD5 			0x03000003
+@@ -388,6 +393,10 @@
+ #define TLS1_FLAGS_TLS_PADDING_BUG		0x0008
+ #define TLS1_FLAGS_SKIP_CERT_VERIFY		0x0010
+ #define TLS1_FLAGS_KEEP_HANDSHAKE		0x0020
++/* SSL3_FLAGS_CCS_OK indicates that a ChangeCipherSpec record is acceptable at
++ * this point in the handshake. If this flag is not set then received CCS
++ * records will cause a fatal error for the connection. */
++#define SSL3_FLAGS_CCS_OK			0x0080
+  
+ /* SSL3_FLAGS_SGC_RESTART_DONE is set when we
+  * restart a handshake because of MS SGC and so prevents us
+@@ -550,6 +559,26 @@
+ 	 *     verified Channel ID from the client: a P256 point, (x,y), where
+ 	 *     each are big-endian values. */
+ 	unsigned char tlsext_channel_id[64];
++
++	/* ALPN information
++	 * (we are in the process of transitioning from NPN to ALPN.) */
++
++	/* In a server these point to the selected ALPN protocol after the
++	 * ClientHello has been processed. In a client these contain the
++	 * protocol that the server selected once the ServerHello has been
++	 * processed. */
++	unsigned char *alpn_selected;
++	unsigned alpn_selected_len;
++
++	/* These point to the digest function to use for signatures made with
++	 * each type of public key. A NULL value indicates that the default
++	 * digest should be used, which is SHA1 as of TLS 1.2.
++	 *
++	 * (These should be in the tmp member, but we have to put them here to
++	 * ensure binary compatibility with earlier OpenSSL 1.0.* releases.) */
++	const EVP_MD *digest_rsa;
++	const EVP_MD *digest_dsa;
++	const EVP_MD *digest_ecdsa;
+ 	} SSL3_STATE;
+ 
+ #endif
+@@ -699,4 +728,3 @@
+ }
+ #endif
+ #endif
+-
+diff -ur a/include/openssl/tls1.h b/include/openssl/tls1.h
+--- a/include/openssl/tls1.h	2013-07-24 23:14:04.000000000 +0200
++++ b/include/openssl/tls1.h	2015-03-17 02:24:59.000000000 +0100
+@@ -159,17 +159,19 @@
+ 
+ #define TLS1_ALLOW_EXPERIMENTAL_CIPHERSUITES	0
+ 
++#define TLS1_VERSION			0x0301
++#define TLS1_1_VERSION			0x0302
+ #define TLS1_2_VERSION			0x0303
+-#define TLS1_2_VERSION_MAJOR		0x03
+-#define TLS1_2_VERSION_MINOR		0x03
++#define TLS_MAX_VERSION			TLS1_2_VERSION
++
++#define TLS1_VERSION_MAJOR		0x03
++#define TLS1_VERSION_MINOR		0x01
+ 
+-#define TLS1_1_VERSION			0x0302
+ #define TLS1_1_VERSION_MAJOR		0x03
+ #define TLS1_1_VERSION_MINOR		0x02
+ 
+-#define TLS1_VERSION			0x0301
+-#define TLS1_VERSION_MAJOR		0x03
+-#define TLS1_VERSION_MINOR		0x01
++#define TLS1_2_VERSION_MAJOR		0x03
++#define TLS1_2_VERSION_MINOR		0x03
+ 
+ #define TLS1_get_version(s) \
+ 		((s->version >> 8) == TLS1_VERSION_MAJOR ? s->version : 0)
+@@ -187,6 +189,7 @@
+ #define TLS1_AD_PROTOCOL_VERSION	70	/* fatal */
+ #define TLS1_AD_INSUFFICIENT_SECURITY	71	/* fatal */
+ #define TLS1_AD_INTERNAL_ERROR		80	/* fatal */
++#define TLS1_AD_INAPPROPRIATE_FALLBACK	86	/* fatal */
+ #define TLS1_AD_USER_CANCELLED		90
+ #define TLS1_AD_NO_RENEGOTIATION	100
+ /* codes 110-114 are from RFC3546 */
+@@ -230,6 +233,9 @@
+ /* ExtensionType value from RFC5620 */
+ #define TLSEXT_TYPE_heartbeat	15
+ 
++/* ExtensionType value from draft-ietf-tls-applayerprotoneg-00 */
++#define TLSEXT_TYPE_application_layer_protocol_negotiation 16
++
+ /* ExtensionType value from RFC4507 */
+ #define TLSEXT_TYPE_session_ticket		35
+ 
+diff -ur a/openssl.config b/openssl.config
+--- a/openssl.config	2013-07-24 23:14:04.000000000 +0200
++++ b/openssl.config	2015-03-17 02:24:59.000000000 +0100
+@@ -991,6 +991,10 @@
+ channelid.patch \
+ eng_dyn_dirs.patch \
+ fix_clang_build.patch \
++tls12_digests.patch \
++alpn.patch \
++early_ccs.patch \
++0018-tls_fallback_scsv.patch \
+ "
+ 
+ OPENSSL_PATCHES_progs_SOURCES="\
+@@ -1047,3 +1051,51 @@
+ crypto/x509v3/v3_utl.c \
+ "
+ 
++OPENSSL_PATCHES_tls12_digests_SOURCES="\
++ssl/s3_clnt.c \
++ssl/ssl3.h \
++ssl/ssl_cert.c \
++ssl/ssl_lib.c \
++ssl/ssl_locl.h \
++ssl/t1_lib.c \
++"
++
++OPENSSL_PATCHES_alpn_SOURCES="\
++apps/s_client.c \
++ssl/s3_lib.c \
++ssl/ssl.h \
++ssl/ssl3.h \
++ssl/ssl_lib.c \
++ssl/t1_lib.c \
++ssl/tls1.h \
++"
++
++OPENSSL_PATCHES_early_ccs_SOURCES="\
++ssl/s3_clnt.c \
++ssl/s3_pkt.c \
++ssl/s3_srvr.c \
++ssl/ssl.h \
++ssl/ssl3.h \
++ssl/ssl_err.c \
++"
++
++OPENSSL_PATCHES_fallback_scsv_SOURCES="\
++crypto/err/openssl.ec \
++include/openssl/dtls1.h \
++include/openssl/ssl.h \
++include/openssl/ssl3.h \
++include/openssl/tls1.h \
++ssl/d1_lib.c \
++ssl/dtls1.h \
++ssl/s23_clnt.c \
++ssl/s23_srvr.c \
++ssl/s2_lib.c \
++ssl/s3_enc.c \
++ssl/s3_lib.c \
++ssl/ssl.h \
++ssl/ssl3.h \
++ssl/ssl_err.c \
++ssl/ssl_lib.c \
++ssl/t1_enc.c \
++ssl/tls1.h \
++"
+Nur in b/patches: 0018-tls_fallback_scsv.patch.
+diff -ur a/patches/README b/patches/README
+--- a/patches/README	2013-07-24 23:14:04.000000000 +0200
++++ b/patches/README	2015-03-17 02:24:59.000000000 +0100
+@@ -26,3 +26,19 @@
+ fix_clang_build.patch
+ 
+ Fixes the Clang based build.
++
++tls12_digests.patch
++
++Fixes a bug with handling TLS 1.2 and digest functions for DSA and ECDSA
++keys.
++
++alpn.patch
++
++This change adds support for ALPN in OpenSSL. ALPN is the IETF
++blessed version of NPN and we'll be supporting both ALPN and NPN for
++some time yet.
++
++tls_fallback_scsv.patch
++
++Adds the signalling cipher suite value (SCSV) from
++https://tools.ietf.org/html/draft-ietf-tls-downgrade-scsv-00
+Nur in b/patches: alpn.patch.
+Nur in b/patches: early_ccs.patch.
+diff -ur a/patches/jsse.patch b/patches/jsse.patch
+--- a/patches/jsse.patch	2013-07-24 23:14:04.000000000 +0200
++++ b/patches/jsse.patch	2015-03-17 02:24:59.000000000 +0100
+@@ -352,7 +352,7 @@
+  
+ --- openssl-1.0.0b.orig/ssl/ssl_rsa.c	2009-09-12 23:09:26.000000000 +0000
+ +++ openssl-1.0.0b/ssl/ssl_rsa.c	2010-11-30 00:03:47.000000000 +0000
+-@@ -697,6 +697,42 @@ int SSL_CTX_use_PrivateKey_ASN1(int type
++@@ -697,6 +697,44 @@ int SSL_CTX_use_PrivateKey_ASN1(int type
+  	}
+  
+  
+@@ -373,6 +373,8 @@
+ +		SSLerr(SSL_F_SSL_USE_CERTIFICATE_CHAIN,SSL_R_NO_CERTIFICATE_ASSIGNED);
+ +		return(0);
+ +		}
+++	if (ssl->cert->key->cert_chain != NULL)
+++		sk_X509_pop_free(ssl->cert->key->cert_chain, X509_free);
+ +	ssl->cert->key->cert_chain = cert_chain;
+ +	return(1);
+ +	}
+Nur in b/patches: tls12_digests.patch.
+diff -ur a/ssl/d1_both.c b/ssl/d1_both.c
+--- a/ssl/d1_both.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/d1_both.c	2015-03-17 02:24:59.000000000 +0100
+@@ -620,7 +620,16 @@
+ 		frag->msg_header.frag_off = 0;
+ 		}
+ 	else
++		{
+ 		frag = (hm_fragment*) item->data;
++		if (frag->msg_header.msg_len != msg_hdr->msg_len)
++			{
++			item = NULL;
++			frag = NULL;
++			goto err;
++			}
++		}
++
+ 
+ 	/* If message is already reassembled, this must be a
+ 	 * retransmit and can be dropped.
+diff -ur a/ssl/d1_lib.c b/ssl/d1_lib.c
+--- a/ssl/d1_lib.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/d1_lib.c	2015-03-17 02:24:59.000000000 +0100
+@@ -262,6 +262,16 @@
+ 	case DTLS_CTRL_LISTEN:
+ 		ret = dtls1_listen(s, parg);
+ 		break;
++	case SSL_CTRL_CHECK_PROTO_VERSION:
++		/* For library-internal use; checks that the current protocol
++		 * is the highest enabled version (according to s->ctx->method,
++		 * as version negotiation may have changed s->method). */
++#if DTLS_MAX_VERSION != DTLS1_VERSION
++#  error Code needs update for DTLS_method() support beyond DTLS1_VERSION.
++#endif
++		/* Just one protocol version is supported so far;
++		 * fail closed if the version is not as expected. */
++		return s->version == DTLS_MAX_VERSION;
+ 
+ 	default:
+ 		ret = ssl3_ctrl(s, cmd, larg, parg);
+diff -ur a/ssl/d1_srvr.c b/ssl/d1_srvr.c
+--- a/ssl/d1_srvr.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/d1_srvr.c	2015-03-17 02:24:59.000000000 +0100
+@@ -449,24 +449,15 @@
+ 		case SSL3_ST_SW_KEY_EXCH_B:
+ 			alg_k = s->s3->tmp.new_cipher->algorithm_mkey;
+ 
+-			/* clear this, it may get reset by
+-			 * send_server_key_exchange */
+-			if ((s->options & SSL_OP_EPHEMERAL_RSA)
+-#ifndef OPENSSL_NO_KRB5
+-				&& !(alg_k & SSL_kKRB5)
+-#endif /* OPENSSL_NO_KRB5 */
+-				)
+-				/* option SSL_OP_EPHEMERAL_RSA sends temporary RSA key
+-				 * even when forbidden by protocol specs
+-				 * (handshake may fail as clients are not required to
+-				 * be able to handle this) */
+-				s->s3->tmp.use_rsa_tmp=1;
+-			else
+-				s->s3->tmp.use_rsa_tmp=0;
++			/*
++			 * clear this, it may get reset by
++			 * send_server_key_exchange
++			 */
++			s->s3->tmp.use_rsa_tmp=0;
+ 
+ 			/* only send if a DH key exchange or
+ 			 * RSA but we have a sign only certificate */
+-			if (s->s3->tmp.use_rsa_tmp
++			if (0
+ 			/* PSK: send ServerKeyExchange if PSK identity
+ 			 * hint if provided */
+ #ifndef OPENSSL_NO_PSK
+diff -ur a/ssl/dtls1.h b/ssl/dtls1.h
+--- a/ssl/dtls1.h	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/dtls1.h	2015-03-17 02:24:59.000000000 +0100
+@@ -84,6 +84,8 @@
+ #endif
+ 
+ #define DTLS1_VERSION			0xFEFF
++#define DTLS_MAX_VERSION		DTLS1_VERSION
++
+ #define DTLS1_BAD_VER			0x0100
+ 
+ #if 0
+@@ -284,4 +286,3 @@
+ }
+ #endif
+ #endif
+-
+diff -ur a/ssl/s23_clnt.c b/ssl/s23_clnt.c
+--- a/ssl/s23_clnt.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/s23_clnt.c	2015-03-17 02:24:59.000000000 +0100
+@@ -715,6 +715,9 @@
+ 			goto err;
+ 			}
+ 
++		/* ensure that TLS_MAX_VERSION is up-to-date */
++		OPENSSL_assert(s->version <= TLS_MAX_VERSION);
++
+ 		if (p[0] == SSL3_RT_ALERT && p[5] != SSL3_AL_WARNING)
+ 			{
+ 			/* fatal alert */
+diff -ur a/ssl/s23_srvr.c b/ssl/s23_srvr.c
+--- a/ssl/s23_srvr.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/s23_srvr.c	2015-03-17 02:24:59.000000000 +0100
+@@ -425,6 +425,9 @@
+ 			}
+ 		}
+ 
++	/* ensure that TLS_MAX_VERSION is up-to-date */
++	OPENSSL_assert(s->version <= TLS_MAX_VERSION);
++
+ #ifdef OPENSSL_FIPS
+ 	if (FIPS_mode() && (s->version < TLS1_VERSION))
+ 		{
+diff -ur a/ssl/s2_lib.c b/ssl/s2_lib.c
+--- a/ssl/s2_lib.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/s2_lib.c	2015-03-17 02:24:59.000000000 +0100
+@@ -391,6 +391,8 @@
+ 	case SSL_CTRL_GET_SESSION_REUSED:
+ 		ret=s->hit;
+ 		break;
++	case SSL_CTRL_CHECK_PROTO_VERSION:
++		return ssl3_ctrl(s, SSL_CTRL_CHECK_PROTO_VERSION, larg, parg);
+ 	default:
+ 		break;
+ 		}
+diff -ur a/ssl/s3_clnt.c b/ssl/s3_clnt.c
+--- a/ssl/s3_clnt.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/s3_clnt.c	2015-03-17 02:24:59.000000000 +0100
+@@ -606,7 +606,7 @@
+ 
+ 		case SSL3_ST_CR_FINISHED_A:
+ 		case SSL3_ST_CR_FINISHED_B:
+-
++			s->s3->flags |= SSL3_FLAGS_CCS_OK;
+ 			ret=ssl3_get_finished(s,SSL3_ST_CR_FINISHED_A,
+ 				SSL3_ST_CR_FINISHED_B);
+ 			if (ret <= 0) goto end;
+@@ -988,6 +988,7 @@
+ 		SSLerr(SSL_F_SSL3_GET_SERVER_HELLO,SSL_R_ATTEMPT_TO_REUSE_SESSION_IN_DIFFERENT_CONTEXT);
+ 		goto f_err;
+ 		}
++	    s->s3->flags |= SSL3_FLAGS_CCS_OK;
+ 	    s->hit=1;
+ 	    }
+ 	else	/* a miss or crap from the other end */
+@@ -1553,6 +1554,13 @@
+ #ifndef OPENSSL_NO_RSA
+ 	if (alg_k & SSL_kRSA)
+ 		{
++		/* Temporary RSA keys only allowed in export ciphersuites */
++		if (!SSL_C_IS_EXPORT(s->s3->tmp.new_cipher))
++			{
++			al=SSL_AD_UNEXPECTED_MESSAGE;
++			SSLerr(SSL_F_SSL3_GET_SERVER_CERTIFICATE,SSL_R_UNEXPECTED_MESSAGE);
++			goto f_err;
++			}
+ 		if ((rsa=RSA_new()) == NULL)
+ 			{
+ 			SSLerr(SSL_F_SSL3_GET_KEY_EXCHANGE,ERR_R_MALLOC_FAILURE);
+@@ -2014,12 +2022,13 @@
+ 			SSLerr(SSL_F_SSL3_GET_CERTIFICATE_REQUEST,SSL_R_DATA_LENGTH_TOO_LONG);
+ 			goto err;
+ 			}
+-		if ((llen & 1) || !tls1_process_sigalgs(s, p, llen))
++		if (llen & 1)
+ 			{
+ 			ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_DECODE_ERROR);
+ 			SSLerr(SSL_F_SSL3_GET_CERTIFICATE_REQUEST,SSL_R_SIGNATURE_ALGORITHMS_ERROR);
+ 			goto err;
+ 			}
++		tls1_process_sigalgs(s, p, llen);
+ 		p += llen;
+ 		}
+ 
+@@ -2589,6 +2598,13 @@
+ 			int ecdh_clnt_cert = 0;
+ 			int field_size = 0;
+ 
++			if (s->session->sess_cert == NULL) 
++				{
++				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_UNEXPECTED_MESSAGE);
++				SSLerr(SSL_F_SSL3_SEND_CLIENT_KEY_EXCHANGE,SSL_R_UNEXPECTED_MESSAGE);
++				goto err;
++				}
++
+ 			/* Did we send out the client's
+ 			 * ECDH share for use in premaster
+ 			 * computation as part of client certificate?
+@@ -3041,7 +3057,28 @@
+ 			{
+ 			long hdatalen = 0;
+ 			void *hdata;
+-			const EVP_MD *md = s->cert->key->digest;
++			const EVP_MD *md;
++			switch (ssl_cert_type(NULL, pkey))
++				{
++			case SSL_PKEY_RSA_ENC:
++				md = s->s3->digest_rsa;
++				break;
++			case SSL_PKEY_DSA_SIGN:
++				md = s->s3->digest_dsa;
++				break;
++			case SSL_PKEY_ECC:
++				md = s->s3->digest_ecdsa;
++				break;
++			default:
++				md = NULL;
++				}
++			if (!md)
++				/* Unlike with the SignatureAlgorithm extension (sent by clients),
++				 * there are no default algorithms for the CertificateRequest message
++				 * (sent by servers). However, now that we've sent a certificate
++				 * for which we don't really know what hash to use for signing, the
++				 * best we can do is try a default algorithm. */
++				md = EVP_sha1();
+ 			hdatalen = BIO_get_mem_data(s->s3->handshake_buffer,
+ 								&hdata);
+ 			if (hdatalen <= 0 || !tls12_get_sigandhash(p, pkey, md))
+diff -ur a/ssl/s3_enc.c b/ssl/s3_enc.c
+--- a/ssl/s3_enc.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/s3_enc.c	2015-03-17 02:24:59.000000000 +0100
+@@ -892,7 +892,7 @@
+ 	case SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE: return(SSL3_AD_HANDSHAKE_FAILURE);
+ 	case SSL_AD_BAD_CERTIFICATE_HASH_VALUE: return(SSL3_AD_HANDSHAKE_FAILURE);
+ 	case SSL_AD_UNKNOWN_PSK_IDENTITY:return(TLS1_AD_UNKNOWN_PSK_IDENTITY);
++	case SSL_AD_INAPPROPRIATE_FALLBACK:return(TLS1_AD_INAPPROPRIATE_FALLBACK);
+ 	default:			return(-1);
+ 		}
+ 	}
+-
+diff -ur a/ssl/s3_lib.c b/ssl/s3_lib.c
+--- a/ssl/s3_lib.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/s3_lib.c	2015-03-17 02:24:59.000000000 +0100
+@@ -2996,6 +2996,11 @@
+ 		BIO_free(s->s3->handshake_buffer);
+ 	}
+ 	if (s->s3->handshake_dgst) ssl3_free_digest_list(s);
++#ifndef OPENSSL_NO_TLSEXT
++	if (s->s3->alpn_selected)
++		OPENSSL_free(s->s3->alpn_selected);
++#endif
++
+ #ifndef OPENSSL_NO_SRP
+ 	SSL_SRP_CTX_free(s);
+ #endif
+@@ -3055,6 +3060,14 @@
+ 	if (s->s3->handshake_dgst) {
+ 		ssl3_free_digest_list(s);
+ 	}	
++
++#if !defined(OPENSSL_NO_TLSEXT)
++	if (s->s3->alpn_selected)
++		{
++		free(s->s3->alpn_selected);
++		s->s3->alpn_selected = NULL;
++		}
++#endif
+ 	memset(s->s3,0,sizeof *s->s3);
+ 	s->s3->rbuf.buf = rp;
+ 	s->s3->wbuf.buf = wp;
+@@ -3388,6 +3401,33 @@
+ 		return 64;
+ 
+ #endif /* !OPENSSL_NO_TLSEXT */
++
++	case SSL_CTRL_CHECK_PROTO_VERSION:
++		/* For library-internal use; checks that the current protocol
++		 * is the highest enabled version (according to s->ctx->method,
++		 * as version negotiation may have changed s->method). */
++		if (s->version == s->ctx->method->version)
++			return 1;
++		/* Apparently we're using a version-flexible SSL_METHOD
++		 * (not at its highest protocol version). */
++		if (s->ctx->method->version == SSLv23_method()->version)
++			{
++#if TLS_MAX_VERSION != TLS1_2_VERSION
++#  error Code needs update for SSLv23_method() support beyond TLS1_2_VERSION.
++#endif
++			if (!(s->options & SSL_OP_NO_TLSv1_2))
++				return s->version == TLS1_2_VERSION;
++			if (!(s->options & SSL_OP_NO_TLSv1_1))
++				return s->version == TLS1_1_VERSION;
++			if (!(s->options & SSL_OP_NO_TLSv1))
++				return s->version == TLS1_VERSION;
++			if (!(s->options & SSL_OP_NO_SSLv3))
++				return s->version == SSL3_VERSION;
++			if (!(s->options & SSL_OP_NO_SSLv2))
++				return s->version == SSL2_VERSION;
++			}
++		return 0; /* Unexpected state; fail closed. */
++
+ 	default:
+ 		break;
+ 		}
+@@ -3765,6 +3805,7 @@
+ 		break;
+ #endif
+ #endif
++
+ 	default:
+ 		return(0);
+ 		}
+@@ -4348,4 +4389,3 @@
+ 		return SSL_HANDSHAKE_MAC_SHA256 | TLS1_PRF_SHA256;
+ 	return alg2;
+ 	}
+-		
+diff -ur a/ssl/s3_pkt.c b/ssl/s3_pkt.c
+--- a/ssl/s3_pkt.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/s3_pkt.c	2015-03-17 02:24:59.000000000 +0100
+@@ -1297,6 +1297,13 @@
+ 			goto f_err;
+ 			}
+ 
++		if (!(s->s3->flags & SSL3_FLAGS_CCS_OK))
++			{
++			al=SSL_AD_UNEXPECTED_MESSAGE;
++			SSLerr(SSL_F_SSL3_READ_BYTES,SSL_R_UNEXPECTED_CCS);
++			goto f_err;
++			}
++
+ 		rr->length=0;
+ 
+ 		if (s->msg_callback)
+@@ -1431,7 +1438,12 @@
+ 
+ 	if (s->s3->tmp.key_block == NULL)
+ 		{
+-		if (s->session == NULL) 
++		if (s->session->master_key_length == 0)
++			{
++			SSLerr(SSL_F_SSL3_DO_CHANGE_CIPHER_SPEC,SSL_R_UNEXPECTED_CCS);
++			return (0);
++			}
++		if (s->session == NULL)
+ 			{
+ 			/* might happen if dtls1_read_bytes() calls this */
+ 			SSLerr(SSL_F_SSL3_DO_CHANGE_CIPHER_SPEC,SSL_R_CCS_RECEIVED_EARLY);
+diff -ur a/ssl/s3_srvr.c b/ssl/s3_srvr.c
+--- a/ssl/s3_srvr.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/s3_srvr.c	2015-03-17 02:24:59.000000000 +0100
+@@ -444,20 +444,11 @@
+ 		case SSL3_ST_SW_KEY_EXCH_B:
+ 			alg_k = s->s3->tmp.new_cipher->algorithm_mkey;
+ 
+-			/* clear this, it may get reset by
+-			 * send_server_key_exchange */
+-			if ((s->options & SSL_OP_EPHEMERAL_RSA)
+-#ifndef OPENSSL_NO_KRB5
+-				&& !(alg_k & SSL_kKRB5)
+-#endif /* OPENSSL_NO_KRB5 */
+-				)
+-				/* option SSL_OP_EPHEMERAL_RSA sends temporary RSA key
+-				 * even when forbidden by protocol specs
+-				 * (handshake may fail as clients are not required to
+-				 * be able to handle this) */
+-				s->s3->tmp.use_rsa_tmp=1;
+-			else
+-				s->s3->tmp.use_rsa_tmp=0;
++			/*
++			 * clear this, it may get reset by
++			 * send_server_key_exchange
++			 */
++			s->s3->tmp.use_rsa_tmp=0;
+ 
+ 
+ 			/* only send if a DH key exchange, fortezza or
+@@ -471,7 +462,7 @@
+ 			 * server certificate contains the server's
+ 			 * public key for key exchange.
+ 			 */
+-			if (s->s3->tmp.use_rsa_tmp
++			if (0
+ 			/* PSK: send ServerKeyExchange if PSK identity
+ 			 * hint if provided */
+ #ifndef OPENSSL_NO_PSK
+@@ -670,6 +661,7 @@
+ 		case SSL3_ST_SR_CERT_VRFY_B:
+ 
+ 			/* we should decide if we expected this one */
++			s->s3->flags |= SSL3_FLAGS_CCS_OK;
+ 			ret=ssl3_get_cert_verify(s);
+ 			if (ret <= 0) goto end;
+ 
+@@ -687,6 +679,7 @@
+ 			channel_id = s->s3->tlsext_channel_id_valid;
+ #endif
+ 
++			s->s3->flags |= SSL3_FLAGS_CCS_OK;
+ 			if (next_proto_neg)
+ 				s->state=SSL3_ST_SR_NEXT_PROTO_A;
+ 			else if (channel_id)
+diff -ur a/ssl/ssl.h b/ssl/ssl.h
+--- a/ssl/ssl.h	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/ssl.h	2015-03-17 02:24:59.000000000 +0100
+@@ -590,9 +590,8 @@
+ #define SSL_OP_SINGLE_ECDH_USE				0x00080000L
+ /* If set, always create a new key when using tmp_dh parameters */
+ #define SSL_OP_SINGLE_DH_USE				0x00100000L
+-/* Set to always use the tmp_rsa key when doing RSA operations,
+- * even when this violates protocol specs */
+-#define SSL_OP_EPHEMERAL_RSA				0x00200000L
++/* Does nothing: retained for compatibiity */
++#define SSL_OP_EPHEMERAL_RSA				0x0
+ /* Set on servers to choose the cipher according to the server's
+  * preferences */
+ #define SSL_OP_CIPHER_SERVER_PREFERENCE			0x00400000L
+@@ -646,6 +645,11 @@
+  * one RTT. */
+ #define SSL_MODE_HANDSHAKE_CUTTHROUGH 0x00000020L
+ 
++/* Send TLS_FALLBACK_SCSV in the ClientHello.
++ * To be set by applications that reconnect with a downgraded protocol
++ * version; see draft-ietf-tls-downgrade-scsv-00 for details. */
++#define SSL_MODE_SEND_FALLBACK_SCSV 0x00000200L
++
+ /* Note: SSL[_CTX]_set_{options,mode} use |= op on the previous value,
+  * they cannot be used to clear bits. */
+ 
+@@ -979,6 +983,31 @@
+ 				    void *arg);
+ 	void *next_proto_select_cb_arg;
+ # endif
++
++	/* ALPN information
++	 * (we are in the process of transitioning from NPN to ALPN.) */
++
++	/* For a server, this contains a callback function that allows the
++	 * server to select the protocol for the connection.
++	 *   out: on successful return, this must point to the raw protocol
++	 *        name (without the length prefix).
++	 *   outlen: on successful return, this contains the length of |*out|.
++	 *   in: points to the client's list of supported protocols in
++	 *       wire-format.
++	 *   inlen: the length of |in|. */
++	int (*alpn_select_cb)(SSL *s,
++			      const unsigned char **out,
++			      unsigned char *outlen,
++			      const unsigned char* in,
++			      unsigned int inlen,
++			      void *arg);
++	void *alpn_select_cb_arg;
++
++	/* For a client, this contains the list of supported protocols in wire
++	 * format. */
++	unsigned char* alpn_client_proto_list;
++	unsigned alpn_client_proto_list_len;
++
+         /* SRTP profiles we are willing to do from RFC 5764 */
+         STACK_OF(SRTP_PROTECTION_PROFILE) *srtp_profiles;  
+ 
+@@ -1075,6 +1104,21 @@
+ #define OPENSSL_NPN_NO_OVERLAP	2
+ #endif
+ 
++int SSL_CTX_set_alpn_protos(SSL_CTX *ctx, const unsigned char* protos,
++			    unsigned protos_len);
++int SSL_set_alpn_protos(SSL *ssl, const unsigned char* protos,
++			unsigned protos_len);
++void SSL_CTX_set_alpn_select_cb(SSL_CTX* ctx,
++				int (*cb) (SSL *ssl,
++					   const unsigned char **out,
++					   unsigned char *outlen,
++					   const unsigned char *in,
++					   unsigned int inlen,
++					   void *arg),
++				void *arg);
++void SSL_get0_alpn_selected(const SSL *ssl, const unsigned char **data,
++			    unsigned *len);
++
+ #ifndef OPENSSL_NO_PSK
+ /* the maximum length of the buffer given to callbacks containing the
+  * resulting identity/psk */
+@@ -1365,6 +1409,11 @@
+ 	char tlsext_channel_id_enabled;
+ 	/* The client's Channel ID private key. */
+ 	EVP_PKEY *tlsext_channel_id_private;
++
++	/* For a client, this contains the list of supported protocols in wire
++	 * format. */
++	unsigned char* alpn_client_proto_list;
++	unsigned alpn_client_proto_list_len;
+ #else
+ #define session_ctx ctx
+ #endif /* OPENSSL_NO_TLSEXT */
+@@ -1525,6 +1574,7 @@
+ #define SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE TLS1_AD_BAD_CERTIFICATE_STATUS_RESPONSE
+ #define SSL_AD_BAD_CERTIFICATE_HASH_VALUE TLS1_AD_BAD_CERTIFICATE_HASH_VALUE
+ #define SSL_AD_UNKNOWN_PSK_IDENTITY     TLS1_AD_UNKNOWN_PSK_IDENTITY /* fatal */
++#define SSL_AD_INAPPROPRIATE_FALLBACK	TLS1_AD_INAPPROPRIATE_FALLBACK /* fatal */
+ 
+ #define SSL_ERROR_NONE			0
+ #define SSL_ERROR_SSL			1
+@@ -1638,6 +1688,8 @@
+ #define SSL_CTRL_GET_EXTRA_CHAIN_CERTS		82
+ #define SSL_CTRL_CLEAR_EXTRA_CHAIN_CERTS	83
+ 
++#define SSL_CTRL_CHECK_PROTO_VERSION		119
++
+ #define DTLSv1_get_timeout(ssl, arg) \
+ 	SSL_ctrl(ssl,DTLS_CTRL_GET_TIMEOUT,0, (void *)arg)
+ #define DTLSv1_handle_timeout(ssl) \
+@@ -2427,6 +2479,7 @@
+ #define SSL_R_HTTPS_PROXY_REQUEST			 155
+ #define SSL_R_HTTP_REQUEST				 156
+ #define SSL_R_ILLEGAL_PADDING				 283
++#define SSL_R_INAPPROPRIATE_FALLBACK			 380
+ #define SSL_R_INCONSISTENT_COMPRESSION			 340
+ #define SSL_R_INVALID_CHALLENGE_LENGTH			 158
+ #define SSL_R_INVALID_COMMAND				 280
+@@ -2576,6 +2629,7 @@
+ #define SSL_R_TLSV1_ALERT_DECRYPTION_FAILED		 1021
+ #define SSL_R_TLSV1_ALERT_DECRYPT_ERROR			 1051
+ #define SSL_R_TLSV1_ALERT_EXPORT_RESTRICTION		 1060
++#define SSL_R_TLSV1_ALERT_INAPPROPRIATE_FALLBACK	 1086
+ #define SSL_R_TLSV1_ALERT_INSUFFICIENT_SECURITY		 1071
+ #define SSL_R_TLSV1_ALERT_INTERNAL_ERROR		 1080
+ #define SSL_R_TLSV1_ALERT_NO_RENEGOTIATION		 1100
+@@ -2640,6 +2694,7 @@
+ #define SSL_R_WRONG_VERSION_NUMBER			 267
+ #define SSL_R_X509_LIB					 268
+ #define SSL_R_X509_VERIFICATION_SETUP_PROBLEMS		 269
++#define SSL_R_UNEXPECTED_CCS				 388
+ 
+ #ifdef  __cplusplus
+ }
+diff -ur a/ssl/ssl3.h b/ssl/ssl3.h
+--- a/ssl/ssl3.h	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/ssl3.h	2015-03-17 02:24:59.000000000 +0100
+@@ -128,9 +128,14 @@
+ extern "C" {
+ #endif
+ 
+-/* Signalling cipher suite value: from draft-ietf-tls-renegotiation-03.txt */
++/* Signalling cipher suite value from RFC 5746
++ * (TLS_EMPTY_RENEGOTIATION_INFO_SCSV) */
+ #define SSL3_CK_SCSV				0x030000FF
+ 
++/* Signalling cipher suite value from draft-ietf-tls-downgrade-scsv-00
++ * (TLS_FALLBACK_SCSV) */
++#define SSL3_CK_FALLBACK_SCSV			0x03005600
++
+ #define SSL3_CK_RSA_NULL_MD5			0x03000001
+ #define SSL3_CK_RSA_NULL_SHA			0x03000002
+ #define SSL3_CK_RSA_RC4_40_MD5 			0x03000003
+@@ -388,6 +393,10 @@
+ #define TLS1_FLAGS_TLS_PADDING_BUG		0x0008
+ #define TLS1_FLAGS_SKIP_CERT_VERIFY		0x0010
+ #define TLS1_FLAGS_KEEP_HANDSHAKE		0x0020
++/* SSL3_FLAGS_CCS_OK indicates that a ChangeCipherSpec record is acceptable at
++ * this point in the handshake. If this flag is not set then received CCS
++ * records will cause a fatal error for the connection. */
++#define SSL3_FLAGS_CCS_OK			0x0080
+  
+ /* SSL3_FLAGS_SGC_RESTART_DONE is set when we
+  * restart a handshake because of MS SGC and so prevents us
+@@ -550,6 +559,26 @@
+ 	 *     verified Channel ID from the client: a P256 point, (x,y), where
+ 	 *     each are big-endian values. */
+ 	unsigned char tlsext_channel_id[64];
++
++	/* ALPN information
++	 * (we are in the process of transitioning from NPN to ALPN.) */
++
++	/* In a server these point to the selected ALPN protocol after the
++	 * ClientHello has been processed. In a client these contain the
++	 * protocol that the server selected once the ServerHello has been
++	 * processed. */
++	unsigned char *alpn_selected;
++	unsigned alpn_selected_len;
++
++	/* These point to the digest function to use for signatures made with
++	 * each type of public key. A NULL value indicates that the default
++	 * digest should be used, which is SHA1 as of TLS 1.2.
++	 *
++	 * (These should be in the tmp member, but we have to put them here to
++	 * ensure binary compatibility with earlier OpenSSL 1.0.* releases.) */
++	const EVP_MD *digest_rsa;
++	const EVP_MD *digest_dsa;
++	const EVP_MD *digest_ecdsa;
+ 	} SSL3_STATE;
+ 
+ #endif
+@@ -699,4 +728,3 @@
+ }
+ #endif
+ #endif
+-
+diff -ur a/ssl/ssl_cert.c b/ssl/ssl_cert.c
+--- a/ssl/ssl_cert.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/ssl_cert.c	2015-03-17 02:24:59.000000000 +0100
+@@ -160,21 +160,6 @@
+ 	return ssl_x509_store_ctx_idx;
+ 	}
+ 
+-static void ssl_cert_set_default_md(CERT *cert)
+-	{
+-	/* Set digest values to defaults */
+-#ifndef OPENSSL_NO_DSA
+-	cert->pkeys[SSL_PKEY_DSA_SIGN].digest = EVP_sha1();
+-#endif
+-#ifndef OPENSSL_NO_RSA
+-	cert->pkeys[SSL_PKEY_RSA_SIGN].digest = EVP_sha1();
+-	cert->pkeys[SSL_PKEY_RSA_ENC].digest = EVP_sha1();
+-#endif
+-#ifndef OPENSSL_NO_ECDSA
+-	cert->pkeys[SSL_PKEY_ECC].digest = EVP_sha1();
+-#endif
+-	}
+-
+ CERT *ssl_cert_new(void)
+ 	{
+ 	CERT *ret;
+@@ -189,7 +174,6 @@
+ 
+ 	ret->key= &(ret->pkeys[SSL_PKEY_RSA_ENC]);
+ 	ret->references=1;
+-	ssl_cert_set_default_md(ret);
+ 	return(ret);
+ 	}
+ 
+@@ -322,10 +306,6 @@
+ 	 * chain is held inside SSL_CTX */
+ 
+ 	ret->references=1;
+-	/* Set digests to defaults. NB: we don't copy existing values as they
+-	 * will be set during handshake.
+-	 */
+-	ssl_cert_set_default_md(ret);
+ 
+ 	return(ret);
+ 	
+diff -ur a/ssl/ssl_err.c b/ssl/ssl_err.c
+--- a/ssl/ssl_err.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/ssl_err.c	2015-03-17 02:24:59.000000000 +0100
+@@ -391,6 +391,7 @@
+ {ERR_REASON(SSL_R_HTTPS_PROXY_REQUEST)   ,"https proxy request"},
+ {ERR_REASON(SSL_R_HTTP_REQUEST)          ,"http request"},
+ {ERR_REASON(SSL_R_ILLEGAL_PADDING)       ,"illegal padding"},
++{ERR_REASON(SSL_R_INAPPROPRIATE_FALLBACK),"inappropriate fallback"},
+ {ERR_REASON(SSL_R_INCONSISTENT_COMPRESSION),"inconsistent compression"},
+ {ERR_REASON(SSL_R_INVALID_CHALLENGE_LENGTH),"invalid challenge length"},
+ {ERR_REASON(SSL_R_INVALID_COMMAND)       ,"invalid command"},
+@@ -540,6 +541,7 @@
+ {ERR_REASON(SSL_R_TLSV1_ALERT_DECRYPTION_FAILED),"tlsv1 alert decryption failed"},
+ {ERR_REASON(SSL_R_TLSV1_ALERT_DECRYPT_ERROR),"tlsv1 alert decrypt error"},
+ {ERR_REASON(SSL_R_TLSV1_ALERT_EXPORT_RESTRICTION),"tlsv1 alert export restriction"},
++{ERR_REASON(SSL_R_TLSV1_ALERT_INAPPROPRIATE_FALLBACK),"tlsv1 alert inappropriate fallback"},
+ {ERR_REASON(SSL_R_TLSV1_ALERT_INSUFFICIENT_SECURITY),"tlsv1 alert insufficient security"},
+ {ERR_REASON(SSL_R_TLSV1_ALERT_INTERNAL_ERROR),"tlsv1 alert internal error"},
+ {ERR_REASON(SSL_R_TLSV1_ALERT_NO_RENEGOTIATION),"tlsv1 alert no renegotiation"},
+@@ -604,6 +606,7 @@
+ {ERR_REASON(SSL_R_WRONG_VERSION_NUMBER)  ,"wrong version number"},
+ {ERR_REASON(SSL_R_X509_LIB)              ,"x509 lib"},
+ {ERR_REASON(SSL_R_X509_VERIFICATION_SETUP_PROBLEMS),"x509 verification setup problems"},
++{ERR_REASON(SSL_R_UNEXPECTED_CCS),"unexpected CCS"},
+ {0,NULL}
+ 	};
+ 
+diff -ur a/ssl/ssl_lib.c b/ssl/ssl_lib.c
+--- a/ssl/ssl_lib.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/ssl_lib.c	2015-03-17 02:24:59.000000000 +0100
+@@ -360,6 +360,17 @@
+ # ifndef OPENSSL_NO_NEXTPROTONEG
+ 	s->next_proto_negotiated = NULL;
+ # endif
++
++	if (s->ctx->alpn_client_proto_list)
++		{
++		s->alpn_client_proto_list =
++			OPENSSL_malloc(s->ctx->alpn_client_proto_list_len);
++		if (s->alpn_client_proto_list == NULL)
++			goto err;
++		memcpy(s->alpn_client_proto_list, s->ctx->alpn_client_proto_list,
++		       s->ctx->alpn_client_proto_list_len);
++		s->alpn_client_proto_list_len = s->ctx->alpn_client_proto_list_len;
++		}
+ #endif
+ 
+ 	s->verify_result=X509_V_OK;
+@@ -581,6 +592,8 @@
+ 		OPENSSL_free(s->tlsext_ocsp_resp);
+ 	if (s->tlsext_channel_id_private)
+ 		EVP_PKEY_free(s->tlsext_channel_id_private);
++	if (s->alpn_client_proto_list)
++		OPENSSL_free(s->alpn_client_proto_list);
+ #endif
+ 
+ 	if (s->client_CA != NULL)
+@@ -1412,6 +1425,8 @@
+ 
+ 	if (sk == NULL) return(0);
+ 	q=p;
++	if (put_cb == NULL)
++		put_cb = s->method->put_cipher_by_char;
+ 
+ 	for (i=0; i<sk_SSL_CIPHER_num(sk); i++)
+ 		{
+@@ -1431,25 +1446,36 @@
+ 		    s->psk_client_callback == NULL)
+ 			continue;
+ #endif /* OPENSSL_NO_PSK */
+-		j = put_cb ? put_cb(c,p) : ssl_put_cipher_by_char(s,c,p);
++		j = put_cb(c,p);
+ 		p+=j;
+ 		}
+-	/* If p == q, no ciphers and caller indicates an error. Otherwise
+-	 * add SCSV if not renegotiating.
+-	 */
+-	if (p != q && !s->renegotiate)
++	/* If p == q, no ciphers; caller indicates an error.
++	 * Otherwise, add applicable SCSVs. */
++	if (p != q)
+ 		{
+-		static SSL_CIPHER scsv =
++		if (!s->renegotiate)
+ 			{
+-			0, NULL, SSL3_CK_SCSV, 0, 0, 0, 0, 0, 0, 0, 0, 0
+-			};
+-		j = put_cb ? put_cb(&scsv,p) : ssl_put_cipher_by_char(s,&scsv,p);
+-		p+=j;
++			static SSL_CIPHER scsv =
++				{
++				0, NULL, SSL3_CK_SCSV, 0, 0, 0, 0, 0, 0, 0, 0, 0
++				};
++			j = put_cb(&scsv,p);
++			p+=j;
+ #ifdef OPENSSL_RI_DEBUG
+-		fprintf(stderr, "SCSV sent by client\n");
++			fprintf(stderr, "TLS_EMPTY_RENEGOTIATION_INFO_SCSV sent by client\n");
+ #endif
+-		}
++			}
+ 
++		if (s->mode & SSL_MODE_SEND_FALLBACK_SCSV)
++			{
++			static SSL_CIPHER scsv =
++				{
++				0, NULL, SSL3_CK_FALLBACK_SCSV, 0, 0, 0, 0, 0, 0, 0, 0, 0
++				};
++			j = put_cb(&scsv,p);
++			p+=j;
++			}
++ 		}
+ 	return(p-q);
+ 	}
+ 
+@@ -1459,11 +1485,12 @@
+ 	const SSL_CIPHER *c;
+ 	STACK_OF(SSL_CIPHER) *sk;
+ 	int i,n;
++
+ 	if (s->s3)
+ 		s->s3->send_connection_binding = 0;
+ 
+ 	n=ssl_put_cipher_by_char(s,NULL,NULL);
+-	if ((num%n) != 0)
++	if (n == 0 || (num%n) != 0)
+ 		{
+ 		SSLerr(SSL_F_SSL_BYTES_TO_CIPHER_LIST,SSL_R_ERROR_IN_RECEIVED_CIPHER_LIST);
+ 		return(NULL);
+@@ -1478,7 +1505,7 @@
+ 
+ 	for (i=0; i<num; i+=n)
+ 		{
+-		/* Check for SCSV */
++		/* Check for TLS_EMPTY_RENEGOTIATION_INFO_SCSV */
+ 		if (s->s3 && (n != 3 || !p[0]) &&
+ 			(p[n-2] == ((SSL3_CK_SCSV >> 8) & 0xff)) &&
+ 			(p[n-1] == (SSL3_CK_SCSV & 0xff)))
+@@ -1498,6 +1525,22 @@
+ 			continue;
+ 			}
+ 
++		/* Check for TLS_FALLBACK_SCSV */
++		if (s->s3 && (n != 3 || !p[0]) &&
++			(p[n-2] == ((SSL3_CK_FALLBACK_SCSV >> 8) & 0xff)) &&
++			(p[n-1] == (SSL3_CK_FALLBACK_SCSV & 0xff)))
++			{
++			/* The SCSV indicates that the client previously tried a higher version.
++			 * Fail if the current version is an unexpected downgrade. */
++			if (!SSL_ctrl(s, SSL_CTRL_CHECK_PROTO_VERSION, 0, NULL))
++				{
++				SSLerr(SSL_F_SSL_BYTES_TO_CIPHER_LIST,SSL_R_INAPPROPRIATE_FALLBACK);
++				ssl3_send_alert(s,SSL3_AL_FATAL,SSL_AD_INAPPROPRIATE_FALLBACK);
++				goto err;
++				}
++			continue;
++			}
++
+ 		c=ssl_get_cipher_by_char(s,p);
+ 		p+=n;
+ 		if (c != NULL)
+@@ -1658,6 +1701,78 @@
+ 	ctx->next_proto_select_cb_arg = arg;
+ 	}
+ # endif
++
++/* SSL_CTX_set_alpn_protos sets the ALPN protocol list on |ctx| to |protos|.
++ * |protos| must be in wire-format (i.e. a series of non-empty, 8-bit
++ * length-prefixed strings).
++ *
++ * Returns 0 on success. */
++int SSL_CTX_set_alpn_protos(SSL_CTX *ctx, const unsigned char* protos,
++			    unsigned protos_len)
++	{
++	if (ctx->alpn_client_proto_list)
++		OPENSSL_free(ctx->alpn_client_proto_list);
++
++	ctx->alpn_client_proto_list = OPENSSL_malloc(protos_len);
++	if (!ctx->alpn_client_proto_list)
++		return 1;
++	memcpy(ctx->alpn_client_proto_list, protos, protos_len);
++	ctx->alpn_client_proto_list_len = protos_len;
++
++	return 0;
++	}
++
++/* SSL_set_alpn_protos sets the ALPN protocol list on |ssl| to |protos|.
++ * |protos| must be in wire-format (i.e. a series of non-empty, 8-bit
++ * length-prefixed strings).
++ *
++ * Returns 0 on success. */
++int SSL_set_alpn_protos(SSL *ssl, const unsigned char* protos,
++			unsigned protos_len)
++	{
++	if (ssl->alpn_client_proto_list)
++		OPENSSL_free(ssl->alpn_client_proto_list);
++
++	ssl->alpn_client_proto_list = OPENSSL_malloc(protos_len);
++	if (!ssl->alpn_client_proto_list)
++		return 1;
++	memcpy(ssl->alpn_client_proto_list, protos, protos_len);
++	ssl->alpn_client_proto_list_len = protos_len;
++
++	return 0;
++	}
++
++/* SSL_CTX_set_alpn_select_cb sets a callback function on |ctx| that is called
++ * during ClientHello processing in order to select an ALPN protocol from the
++ * client's list of offered protocols. */
++void SSL_CTX_set_alpn_select_cb(SSL_CTX* ctx,
++				int (*cb) (SSL *ssl,
++					   const unsigned char **out,
++					   unsigned char *outlen,
++					   const unsigned char *in,
++					   unsigned int inlen,
++					   void *arg),
++				void *arg)
++	{
++	ctx->alpn_select_cb = cb;
++	ctx->alpn_select_cb_arg = arg;
++	}
++
++/* SSL_get0_alpn_selected gets the selected ALPN protocol (if any) from |ssl|.
++ * On return it sets |*data| to point to |*len| bytes of protocol name (not
++ * including the leading length-prefix byte). If the server didn't respond with
++ * a negotiated protocol then |*len| will be zero. */
++void SSL_get0_alpn_selected(const SSL *ssl, const unsigned char **data,
++			    unsigned *len)
++	{
++	*data = NULL;
++	if (ssl->s3)
++		*data = ssl->s3->alpn_selected;
++	if (*data == NULL)
++		*len = 0;
++	else
++		*len = ssl->s3->alpn_selected_len;
++	}
+ #endif
+ 
+ int SSL_export_keying_material(SSL *s, unsigned char *out, size_t olen,
+@@ -2010,6 +2125,8 @@
+ #ifndef OPENSSL_NO_TLSEXT
+ 	if (a->tlsext_channel_id_private)
+ 		EVP_PKEY_free(a->tlsext_channel_id_private);
++	if (a->alpn_client_proto_list != NULL)
++		OPENSSL_free(a->alpn_client_proto_list);
+ #endif
+ 
+ 	OPENSSL_free(a);
+@@ -2400,32 +2517,41 @@
+ 	{
+ 	unsigned long alg_a;
+ 	CERT *c;
+-	int idx = -1;
+ 
+ 	alg_a = cipher->algorithm_auth;
+ 	c=s->cert;
+ 
++	/* SHA1 is the default for all signature algorithms up to TLS 1.2,
++	 * except RSA which is handled specially in s3_srvr.c */
++	if (pmd)
++		*pmd = EVP_sha1();
++
+ 	if ((alg_a & SSL_aDSS) &&
+-		(c->pkeys[SSL_PKEY_DSA_SIGN].privatekey != NULL))
+-		idx = SSL_PKEY_DSA_SIGN;
++	    (c->pkeys[SSL_PKEY_DSA_SIGN].privatekey != NULL))
++		{
++		if (pmd && s->s3 && s->s3->digest_dsa)
++			*pmd = s->s3->digest_dsa;
++		return c->pkeys[SSL_PKEY_DSA_SIGN].privatekey;
++		}
+ 	else if (alg_a & SSL_aRSA)
+ 		{
++		if (pmd && s->s3 && s->s3->digest_rsa)
++			*pmd = s->s3->digest_rsa;
+ 		if (c->pkeys[SSL_PKEY_RSA_SIGN].privatekey != NULL)
+-			idx = SSL_PKEY_RSA_SIGN;
+-		else if (c->pkeys[SSL_PKEY_RSA_ENC].privatekey != NULL)
+-			idx = SSL_PKEY_RSA_ENC;
++			return c->pkeys[SSL_PKEY_RSA_SIGN].privatekey;
++		if (c->pkeys[SSL_PKEY_RSA_ENC].privatekey != NULL)
++			return c->pkeys[SSL_PKEY_RSA_ENC].privatekey;
+ 		}
+ 	else if ((alg_a & SSL_aECDSA) &&
+ 	         (c->pkeys[SSL_PKEY_ECC].privatekey != NULL))
+-		idx = SSL_PKEY_ECC;
+-	if (idx == -1)
+ 		{
+-		SSLerr(SSL_F_SSL_GET_SIGN_PKEY,ERR_R_INTERNAL_ERROR);
+-		return(NULL);
++		if (pmd && s->s3 && s->s3->digest_ecdsa)
++			*pmd = s->s3->digest_ecdsa;
++		return c->pkeys[SSL_PKEY_ECC].privatekey;
+ 		}
+-	if (pmd)
+-		*pmd = c->pkeys[idx].digest;
+-	return c->pkeys[idx].privatekey;
++
++	SSLerr(SSL_F_SSL_GET_SIGN_PKEY,ERR_R_INTERNAL_ERROR);
++	return(NULL);
+ 	}
+ 
+ void ssl_update_cache(SSL *s,int mode)
+diff -ur a/ssl/ssl_locl.h b/ssl/ssl_locl.h
+--- a/ssl/ssl_locl.h	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/ssl_locl.h	2015-03-17 02:24:59.000000000 +0100
+@@ -483,8 +483,6 @@
+ 	X509 *x509;
+ 	STACK_OF(X509) *cert_chain;
+ 	EVP_PKEY *privatekey;
+-	/* Digest to use when signing */
+-	const EVP_MD *digest;
+ 	} CERT_PKEY;
+ 
+ typedef struct cert_st
+@@ -1140,7 +1138,7 @@
+ int ssl_parse_clienthello_renegotiate_ext(SSL *s, unsigned char *d, int len,
+ 					  int *al);
+ long ssl_get_algorithm2(SSL *s);
+-int tls1_process_sigalgs(SSL *s, const unsigned char *data, int dsize);
++void tls1_process_sigalgs(SSL *s, const unsigned char *data, int dsize);
+ int tls12_get_req_sig_algs(SSL *s, unsigned char *p);
+ 
+ int ssl_add_clienthello_use_srtp_ext(SSL *s, unsigned char *p, int *len, int maxlen);
+diff -ur a/ssl/ssl_rsa.c b/ssl/ssl_rsa.c
+--- a/ssl/ssl_rsa.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/ssl_rsa.c	2015-03-17 02:24:59.000000000 +0100
+@@ -714,6 +714,8 @@
+ 		SSLerr(SSL_F_SSL_USE_CERTIFICATE_CHAIN,SSL_R_NO_CERTIFICATE_ASSIGNED);
+ 		return(0);
+ 		}
++	if (ssl->cert->key->cert_chain != NULL)
++		sk_X509_pop_free(ssl->cert->key->cert_chain, X509_free);
+ 	ssl->cert->key->cert_chain = cert_chain;
+ 	return(1);
+ 	}
+diff -ur a/ssl/t1_enc.c b/ssl/t1_enc.c
+--- a/ssl/t1_enc.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/t1_enc.c	2015-03-17 02:24:59.000000000 +0100
+@@ -1238,6 +1238,7 @@
+ 	case SSL_AD_BAD_CERTIFICATE_STATUS_RESPONSE: return(TLS1_AD_BAD_CERTIFICATE_STATUS_RESPONSE);
+ 	case SSL_AD_BAD_CERTIFICATE_HASH_VALUE: return(TLS1_AD_BAD_CERTIFICATE_HASH_VALUE);
+ 	case SSL_AD_UNKNOWN_PSK_IDENTITY:return(TLS1_AD_UNKNOWN_PSK_IDENTITY);
++	case SSL_AD_INAPPROPRIATE_FALLBACK:return(TLS1_AD_INAPPROPRIATE_FALLBACK);
+ #if 0 /* not appropriate for TLS, not used for DTLS */
+ 	case DTLS1_AD_MISSING_HANDSHAKE_MESSAGE: return 
+ 					  (DTLS1_AD_MISSING_HANDSHAKE_MESSAGE);
+diff -ur a/ssl/t1_lib.c b/ssl/t1_lib.c
+--- a/ssl/t1_lib.c	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/t1_lib.c	2015-03-17 02:24:59.000000000 +0100
+@@ -659,6 +659,18 @@
+ 		s2n(0,ret);
+ 		}
+ 
++	if (s->alpn_client_proto_list && !s->s3->tmp.finish_md_len)
++		{
++		if ((size_t)(limit - ret) < 6 + s->alpn_client_proto_list_len)
++			return NULL;
++		s2n(TLSEXT_TYPE_application_layer_protocol_negotiation,ret);
++		s2n(2 + s->alpn_client_proto_list_len,ret);
++		s2n(s->alpn_client_proto_list_len,ret);
++		memcpy(ret, s->alpn_client_proto_list,
++		       s->alpn_client_proto_list_len);
++		ret += s->alpn_client_proto_list_len;
++		}
++
+ #ifndef OPENSSL_NO_SRTP
+         if(SSL_get_srtp_profiles(s))
+                 {
+@@ -879,6 +891,21 @@
+ 		s2n(0,ret);
+ 		}
+ 
++	if (s->s3->alpn_selected)
++		{
++		const unsigned char *selected = s->s3->alpn_selected;
++		unsigned len = s->s3->alpn_selected_len;
++
++		if ((long)(limit - ret - 4 - 2 - 1 - len) < 0)
++			return NULL;
++		s2n(TLSEXT_TYPE_application_layer_protocol_negotiation,ret);
++		s2n(3 + len,ret);
++		s2n(1 + len,ret);
++		*ret++ = len;
++		memcpy(ret, selected, len);
++		ret += len;
++		}
++
+ 	if ((extdatalen = ret-p-2)== 0) 
+ 		return p;
+ 
+@@ -886,6 +913,76 @@
+ 	return ret;
+ 	}
+ 
++/* tls1_alpn_handle_client_hello is called to process the ALPN extension in a
++ * ClientHello.
++ *   data: the contents of the extension, not including the type and length.
++ *   data_len: the number of bytes in |data|
++ *   al: a pointer to the alert value to send in the event of a non-zero
++ *       return.
++ *
++ *   returns: 0 on success. */
++static int tls1_alpn_handle_client_hello(SSL *s, const unsigned char *data,
++					 unsigned data_len, int *al)
++	{
++	unsigned i;
++	unsigned proto_len;
++	const unsigned char *selected;
++	unsigned char selected_len;
++	int r;
++
++	if (s->ctx->alpn_select_cb == NULL)
++		return 0;
++
++	if (data_len < 2)
++		goto parse_error;
++
++	/* data should contain a uint16 length followed by a series of 8-bit,
++	 * length-prefixed strings. */
++	i = ((unsigned) data[0]) << 8 |
++	    ((unsigned) data[1]);
++	data_len -= 2;
++	data += 2;
++	if (data_len != i)
++		goto parse_error;
++
++	if (data_len < 2)
++		goto parse_error;
++
++	for (i = 0; i < data_len;)
++		{
++		proto_len = data[i];
++		i++;
++
++		if (proto_len == 0)
++			goto parse_error;
++
++		if (i + proto_len < i || i + proto_len > data_len)
++			goto parse_error;
++
++		i += proto_len;
++		}
++
++	r = s->ctx->alpn_select_cb(s, &selected, &selected_len, data, data_len,
++				   s->ctx->alpn_select_cb_arg);
++	if (r == SSL_TLSEXT_ERR_OK) {
++		if (s->s3->alpn_selected)
++			OPENSSL_free(s->s3->alpn_selected);
++		s->s3->alpn_selected = OPENSSL_malloc(selected_len);
++		if (!s->s3->alpn_selected)
++			{
++			*al = SSL_AD_INTERNAL_ERROR;
++			return -1;
++			}
++		memcpy(s->s3->alpn_selected, selected, selected_len);
++		s->s3->alpn_selected_len = selected_len;
++	}
++	return 0;
++
++parse_error:
++	*al = SSL_AD_DECODE_ERROR;
++	return -1;
++	}
++
+ int ssl_parse_clienthello_tlsext(SSL *s, unsigned char **p, unsigned char *d, int n, int *al)
+ 	{
+ 	unsigned short type;
+@@ -897,10 +994,23 @@
+ 
+ 	s->servername_done = 0;
+ 	s->tlsext_status_type = -1;
++
++	/* Reset TLS 1.2 digest functions to defaults because they don't carry
++	 * over to a renegotiation. */
++	s->s3->digest_rsa = NULL;
++	s->s3->digest_dsa = NULL;
++	s->s3->digest_ecdsa = NULL;
++
+ #ifndef OPENSSL_NO_NEXTPROTONEG
+ 	s->s3->next_proto_neg_seen = 0;
+ #endif
+ 
++	if (s->s3->alpn_selected)
++		{
++		OPENSSL_free(s->s3->alpn_selected);
++		s->s3->alpn_selected = NULL;
++		}
++
+ #ifndef OPENSSL_NO_HEARTBEATS
+ 	s->tlsext_heartbeat &= ~(SSL_TLSEXT_HB_ENABLED |
+ 	                       SSL_TLSEXT_HB_DONT_SEND_REQUESTS);
+@@ -1194,11 +1304,7 @@
+ 				*al = SSL_AD_DECODE_ERROR;
+ 				return 0;
+ 				}
+-			if (!tls1_process_sigalgs(s, data, dsize))
+-				{
+-				*al = SSL_AD_DECODE_ERROR;
+-				return 0;
+-				}
++			tls1_process_sigalgs(s, data, dsize);
+ 			}
+ 		else if (type == TLSEXT_TYPE_status_request &&
+ 		         s->version != DTLS1_VERSION && s->ctx->tlsext_status_cb)
+@@ -1331,7 +1437,8 @@
+ #endif
+ #ifndef OPENSSL_NO_NEXTPROTONEG
+ 		else if (type == TLSEXT_TYPE_next_proto_neg &&
+-			 s->s3->tmp.finish_md_len == 0)
++			 s->s3->tmp.finish_md_len == 0 &&
++			 s->s3->alpn_selected == NULL)
+ 			{
+ 			/* We shouldn't accept this extension on a
+ 			 * renegotiation.
+@@ -1355,6 +1462,16 @@
+ 		else if (type == TLSEXT_TYPE_channel_id && s->tlsext_channel_id_enabled)
+ 			s->s3->tlsext_channel_id_valid = 1;
+ 
++		else if (type == TLSEXT_TYPE_application_layer_protocol_negotiation &&
++			 s->ctx->alpn_select_cb &&
++			 s->s3->tmp.finish_md_len == 0)
++			{
++			if (tls1_alpn_handle_client_hello(s, data, size, al) != 0)
++				return 0;
++			/* ALPN takes precedence over NPN. */
++			s->s3->next_proto_neg_seen = 0;
++			}
++
+ 		/* session ticket processed earlier */
+ #ifndef OPENSSL_NO_SRTP
+ 		else if (type == TLSEXT_TYPE_use_srtp)
+@@ -1419,6 +1536,12 @@
+ 	s->s3->next_proto_neg_seen = 0;
+ #endif
+ 
++	if (s->s3->alpn_selected)
++		{
++		OPENSSL_free(s->s3->alpn_selected);
++		s->s3->alpn_selected = NULL;
++		}
++
+ #ifndef OPENSSL_NO_HEARTBEATS
+ 	s->tlsext_heartbeat &= ~(SSL_TLSEXT_HB_ENABLED |
+ 	                       SSL_TLSEXT_HB_DONT_SEND_REQUESTS);
+@@ -1588,6 +1711,51 @@
+ 		else if (type == TLSEXT_TYPE_channel_id)
+ 			s->s3->tlsext_channel_id_valid = 1;
+ 
++		else if (type == TLSEXT_TYPE_application_layer_protocol_negotiation)
++			{
++			unsigned len;
++
++			/* We must have requested it. */
++			if (s->alpn_client_proto_list == NULL)
++				{
++				*al = TLS1_AD_UNSUPPORTED_EXTENSION;
++				return 0;
++				}
++			if (size < 4)
++				{
++				*al = TLS1_AD_DECODE_ERROR;
++				return 0;
++				}
++			/* The extension data consists of:
++			 *   uint16 list_length
++			 *   uint8 proto_length;
++			 *   uint8 proto[proto_length]; */
++			len = data[0];
++			len <<= 8;
++			len |= data[1];
++			if (len != (unsigned) size - 2)
++				{
++				*al = TLS1_AD_DECODE_ERROR;
++				return 0;
++				}
++			len = data[2];
++			if (len != (unsigned) size - 3)
++				{
++				*al = TLS1_AD_DECODE_ERROR;
++				return 0;
++				}
++			if (s->s3->alpn_selected)
++				OPENSSL_free(s->s3->alpn_selected);
++			s->s3->alpn_selected = OPENSSL_malloc(len);
++			if (!s->s3->alpn_selected)
++				{
++				*al = TLS1_AD_INTERNAL_ERROR;
++				return 0;
++				}
++			memcpy(s->s3->alpn_selected, data + 3, len);
++			s->s3->alpn_selected_len = len;
++			}
++
+ 		else if (type == TLSEXT_TYPE_renegotiate)
+ 			{
+ 			if(!ssl_parse_serverhello_renegotiate_ext(s, data, size, al))
+@@ -2350,18 +2518,6 @@
+ 		}
+ 	return -1;
+ 	}
+-#if 0
+-static int tls12_find_nid(int id, tls12_lookup *table, size_t tlen)
+-	{
+-	size_t i;
+-	for (i = 0; i < tlen; i++)
+-		{
+-		if (table[i].id == id)
+-			return table[i].nid;
+-		}
+-	return -1;
+-	}
+-#endif
+ 
+ int tls12_get_sigandhash(unsigned char *p, const EVP_PKEY *pk, const EVP_MD *md)
+ 	{
+@@ -2380,6 +2536,8 @@
+ 	return 1;
+ 	}
+ 
++/* tls12_get_sigid returns the TLS 1.2 SignatureAlgorithm value corresponding
++ * to the given public key, or -1 if not known. */
+ int tls12_get_sigid(const EVP_PKEY *pk)
+ 	{
+ 	return tls12_find_id(pk->type, tls12_sig,
+@@ -2399,47 +2557,49 @@
+ 		return EVP_md5();
+ #endif
+ #ifndef OPENSSL_NO_SHA
+-		case TLSEXT_hash_sha1:
++	case TLSEXT_hash_sha1:
+ 		return EVP_sha1();
+ #endif
+ #ifndef OPENSSL_NO_SHA256
+-		case TLSEXT_hash_sha224:
++	case TLSEXT_hash_sha224:
+ 		return EVP_sha224();
+ 
+-		case TLSEXT_hash_sha256:
++	case TLSEXT_hash_sha256:
+ 		return EVP_sha256();
+ #endif
+ #ifndef OPENSSL_NO_SHA512
+-		case TLSEXT_hash_sha384:
++	case TLSEXT_hash_sha384:
+ 		return EVP_sha384();
+ 
+-		case TLSEXT_hash_sha512:
++	case TLSEXT_hash_sha512:
+ 		return EVP_sha512();
+ #endif
+-		default:
++	default:
+ 		return NULL;
+ 
+ 		}
+ 	}
+ 
+-/* Set preferred digest for each key type */
+-
+-int tls1_process_sigalgs(SSL *s, const unsigned char *data, int dsize)
++/* tls1_process_sigalgs processes a signature_algorithms extension and sets the
++ * digest functions accordingly for each key type.
++ *
++ * See RFC 5246, section 7.4.1.4.1.
++ *
++ * data: points to the content of the extension, not including type and length
++ *     headers.
++ * dsize: the number of bytes of |data|. Must be even.
++ */
++void tls1_process_sigalgs(SSL *s, const unsigned char *data, int dsize)
+ 	{
+-	int i, idx;
+-	const EVP_MD *md;
+-	CERT *c = s->cert;
++	int i;
++	const EVP_MD *md, **digest_ptr;
+ 	/* Extension ignored for TLS versions below 1.2 */
+ 	if (TLS1_get_version(s) < TLS1_2_VERSION)
+-		return 1;
+-	/* Should never happen */
+-	if (!c)
+-		return 0;
++		return;
+ 
+-	c->pkeys[SSL_PKEY_DSA_SIGN].digest = NULL;
+-	c->pkeys[SSL_PKEY_RSA_SIGN].digest = NULL;
+-	c->pkeys[SSL_PKEY_RSA_ENC].digest = NULL;
+-	c->pkeys[SSL_PKEY_ECC].digest = NULL;
++	s->s3->digest_rsa = NULL;
++	s->s3->digest_dsa = NULL;
++	s->s3->digest_ecdsa = NULL;
+ 
+ 	for (i = 0; i < dsize; i += 2)
+ 		{
+@@ -2449,56 +2609,31 @@
+ 			{
+ #ifndef OPENSSL_NO_RSA
+ 			case TLSEXT_signature_rsa:
+-			idx = SSL_PKEY_RSA_SIGN;
++			digest_ptr = &s->s3->digest_rsa;
+ 			break;
+ #endif
+ #ifndef OPENSSL_NO_DSA
+ 			case TLSEXT_signature_dsa:
+-			idx = SSL_PKEY_DSA_SIGN;
++			digest_ptr = &s->s3->digest_dsa;
+ 			break;
+ #endif
+ #ifndef OPENSSL_NO_ECDSA
+ 			case TLSEXT_signature_ecdsa:
+-			idx = SSL_PKEY_ECC;
++			digest_ptr = &s->s3->digest_ecdsa;
+ 			break;
+ #endif
+ 			default:
+ 			continue;
+ 			}
+ 
+-		if (c->pkeys[idx].digest == NULL)
++		if (*digest_ptr == NULL)
+ 			{
+ 			md = tls12_get_hash(hash_alg);
+ 			if (md)
+-				{
+-				c->pkeys[idx].digest = md;
+-				if (idx == SSL_PKEY_RSA_SIGN)
+-					c->pkeys[SSL_PKEY_RSA_ENC].digest = md;
+-				}
++				*digest_ptr = md;
+ 			}
+ 
+ 		}
+-
+-
+-	/* Set any remaining keys to default values. NOTE: if alg is not
+-	 * supported it stays as NULL.
+-	 */
+-#ifndef OPENSSL_NO_DSA
+-	if (!c->pkeys[SSL_PKEY_DSA_SIGN].digest)
+-		c->pkeys[SSL_PKEY_DSA_SIGN].digest = EVP_sha1();
+-#endif
+-#ifndef OPENSSL_NO_RSA
+-	if (!c->pkeys[SSL_PKEY_RSA_SIGN].digest)
+-		{
+-		c->pkeys[SSL_PKEY_RSA_SIGN].digest = EVP_sha1();
+-		c->pkeys[SSL_PKEY_RSA_ENC].digest = EVP_sha1();
+-		}
+-#endif
+-#ifndef OPENSSL_NO_ECDSA
+-	if (!c->pkeys[SSL_PKEY_ECC].digest)
+-		c->pkeys[SSL_PKEY_ECC].digest = EVP_sha1();
+-#endif
+-	return 1;
+ 	}
+ 
+ #endif
+diff -ur a/ssl/tls1.h b/ssl/tls1.h
+--- a/ssl/tls1.h	2013-07-24 23:14:04.000000000 +0200
++++ b/ssl/tls1.h	2015-03-17 02:24:59.000000000 +0100
+@@ -159,17 +159,19 @@
+ 
+ #define TLS1_ALLOW_EXPERIMENTAL_CIPHERSUITES	0
+ 
++#define TLS1_VERSION			0x0301
++#define TLS1_1_VERSION			0x0302
+ #define TLS1_2_VERSION			0x0303
+-#define TLS1_2_VERSION_MAJOR		0x03
+-#define TLS1_2_VERSION_MINOR		0x03
++#define TLS_MAX_VERSION			TLS1_2_VERSION
++
++#define TLS1_VERSION_MAJOR		0x03
++#define TLS1_VERSION_MINOR		0x01
+ 
+-#define TLS1_1_VERSION			0x0302
+ #define TLS1_1_VERSION_MAJOR		0x03
+ #define TLS1_1_VERSION_MINOR		0x02
+ 
+-#define TLS1_VERSION			0x0301
+-#define TLS1_VERSION_MAJOR		0x03
+-#define TLS1_VERSION_MINOR		0x01
++#define TLS1_2_VERSION_MAJOR		0x03
++#define TLS1_2_VERSION_MINOR		0x03
+ 
+ #define TLS1_get_version(s) \
+ 		((s->version >> 8) == TLS1_VERSION_MAJOR ? s->version : 0)
+@@ -187,6 +189,7 @@
+ #define TLS1_AD_PROTOCOL_VERSION	70	/* fatal */
+ #define TLS1_AD_INSUFFICIENT_SECURITY	71	/* fatal */
+ #define TLS1_AD_INTERNAL_ERROR		80	/* fatal */
++#define TLS1_AD_INAPPROPRIATE_FALLBACK	86	/* fatal */
+ #define TLS1_AD_USER_CANCELLED		90
+ #define TLS1_AD_NO_RENEGOTIATION	100
+ /* codes 110-114 are from RFC3546 */
+@@ -230,6 +233,9 @@
+ /* ExtensionType value from RFC5620 */
+ #define TLSEXT_TYPE_heartbeat	15
+ 
++/* ExtensionType value from draft-ietf-tls-applayerprotoneg-00 */
++#define TLSEXT_TYPE_application_layer_protocol_negotiation 16
++
+ /* ExtensionType value from RFC4507 */
+ #define TLSEXT_TYPE_session_ticket		35
+ 
