@@ -61,9 +61,7 @@ PRODUCT_PACKAGES += \
 #ROM-specific applications
 PRODUCT_PACKAGES += \
     Launcher2 \
-    AdAway \
     F-Droid \
-    QuickSnap \
     Music \
     TotalCommander \
     NakedBrowser
