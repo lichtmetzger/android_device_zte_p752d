@@ -64,7 +64,8 @@ PRODUCT_PACKAGES += \
     F-Droid \
     Music \
     TotalCommander \
-    NakedBrowser
+    NakedBrowser \
+    LiveWallpapersPicker
 
 # Ramdisk
 PRODUCT_COPY_FILES += \
