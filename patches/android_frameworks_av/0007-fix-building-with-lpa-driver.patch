@@ -1,0 +1,11 @@
+--- a/media/libstagefright/ResourceManager.old	2015-08-12 15:06:38.256995800 +0200
++++ b/media/libstagefright/ResourceManager.cpp	2015-08-12 12:21:34.000000000 +0200
+@@ -56,6 +56,8 @@
+ #define LPA_MIN_DURATION_USEC_DEFAULT 60000000
+ 
+ namespace android {
++//gcc fix
++int LPAPlayer::mObjectsAlive = 0;
+ 
+ #ifdef USE_LPA_MODE
+ // Check for the conditions to honor lpa playback
