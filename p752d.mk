@@ -65,7 +65,8 @@ PRODUCT_PACKAGES += \
     Music \
     TotalCommander \
     NakedBrowser \
-    LiveWallpapersPicker
+    LiveWallpapersPicker \
+    RotationLocker
 
 # Ramdisk
 PRODUCT_COPY_FILES += \
